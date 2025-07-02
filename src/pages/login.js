@@ -26,21 +26,94 @@ export default function LoginPage() {
       const res = await getProfilUtilisateur(idToken);
 
       if (res.error) setMessage(res.error);
-      else setMessage(`Bienvenue UID : ${res.uid}`);
+      else setMessage(`Connexion réussie ! Bienvenue`);
     } catch (err) {
       setMessage(err.message);
     }
   };
 
+  // Styles 
+  const styles = {
+    container: {
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "linear-gradient(120deg, #e0eafc, #cfdef3)",
+    },
+    card: {
+      background: "#fff",
+      padding: "2rem 2.5rem",
+      borderRadius: "16px",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+      minWidth: "300px",
+      maxWidth: "90vh",
+    },
+    title: {
+      marginBottom: "1.5rem",
+      textAlign: "center",
+      color: "#2d3a4b",
+      fontWeight: 700,
+      fontSize: "1.7rem",
+      letterSpacing: "1px",
+    },
+    input: {
+      width: "100%",
+      padding: "0.8rem",
+      margin: "0.5rem 0",
+      border: "1px solid #d1d5db",
+      borderRadius: "8px",
+      fontSize: "1rem",
+      outline: "none",
+      transition: "border 0.2s",
+    },
+    button: {
+      width: "100%",
+      padding: "0.9rem",
+      marginTop: "1rem",
+      background: "linear-gradient(90deg, #4f8cff, #38b6ff)",
+      color: "#fff",
+      border: "none",
+      borderRadius: "8px",
+      fontWeight: 600,
+      fontSize: "1.1rem",
+      cursor: "pointer",
+      boxShadow: "0 2px 8px rgba(79,140,255,0.08)",
+      transition: "background 0.2s",
+    },
+    message: {
+      marginTop: "1rem",
+      color: "green",
+      textAlign: "center",
+      minHeight: "1.5em",
+    },
+  };
+
   return (
-    <div>
-      <h2>Connexion</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="email" type="email" placeholder="Email" onChange={handleChange} />
-        <input name="mot_de_passe" type="password" placeholder="Mot de passe" onChange={handleChange} />
-        <button type="submit">Se connecter</button>
+    <div style={styles.container}>
+      <form style={styles.card} onSubmit={handleSubmit}>
+        <div style={styles.title}>Connexion</div>
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          style={styles.input}
+          onChange={handleChange}
+          autoComplete="username"
+        />
+        <input
+          name="mot_de_passe"
+          type="password"
+          placeholder="Mot de passe"
+          style={styles.input}
+          onChange={handleChange}
+          autoComplete="current-password"
+        />
+        <button type="submit" style={styles.button}>
+          Se connecter
+        </button>
+        <div style={styles.message}>{message}</div>
       </form>
-      <p>{message}</p>
     </div>
   );
 }

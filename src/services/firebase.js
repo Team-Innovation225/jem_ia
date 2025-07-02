@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { signOut } from "firebase/auth";
 
 
 const firebaseConfig = {
@@ -16,3 +17,14 @@ const app = initializeApp(firebaseConfig);
 
 
 export const auth = getAuth(app);
+
+
+export const deconnexion = async () => {
+  try {
+    await signOut(auth);
+    return { success: true };
+  } catch (error) {
+    return { error: error.message };
+  }
+};
+
