@@ -3,9 +3,11 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { getProfilUtilisateur } from "../services/api";
 
-export default function LoginPage() {
+
+export default function LoginPage({ onSuccess }) {
   const [form, setForm] = useState({ email: "", mot_de_passe: "" });
   const [message, setMessage] = useState("");
+
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -20,13 +22,15 @@ export default function LoginPage() {
         form.email,
         form.mot_de_passe
       );
-
       const idToken = await userCredential.user.getIdToken();
-
       const res = await getProfilUtilisateur(idToken);
 
       if (res.error) setMessage(res.error);
-      else setMessage(`Connexion réussie ! Bienvenue`);
+      else {
+        setMessage(`Connexion réussie ! Bienvenue`);
+        if (onSuccess) onSuccess(res); // <-- Appel ici
+        // navigate("/chatAI"); // Retire la redirection ici si tu veux gérer la vue dans ChatAI
+      }
     } catch (err) {
       setMessage(err.message);
     }

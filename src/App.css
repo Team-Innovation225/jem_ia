@@ -36,3 +36,14 @@
     transform: rotate(360deg);
   }
 }
+/* Pour Chrome, Safari, Edge */
+.chatArea::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

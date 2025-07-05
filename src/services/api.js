@@ -1,6 +1,6 @@
 export const inscrireUtilisateur = async (userData, idToken) => {
   try {
-    const response = await fetch("https://f103-41-202-89-163.ngrok-free.app/auth/inscription/", {
+    const response = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/inscription/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -24,7 +24,7 @@ export const inscrireUtilisateur = async (userData, idToken) => {
 
 export const getProfilUtilisateur = async (idToken) => {
   try {
-    const response = await fetch("https://f103-41-202-89-163.ngrok-free.app/auth/profil/", {
+    const response = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/profil/", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -60,3 +60,23 @@ export const getProfilUtilisateur = async (idToken) => {
     return { error: "Erreur réseau ou serveur" };
   }
 };
+
+// src/api/diagnose.js
+export async function converseWithIA(userInput, sessionId = null, context = null, history = null) {
+  const payload = {
+    user_input: userInput,
+    session_id: sessionId,
+    context: context,
+    history: history
+  };
+  const res = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/ia/diagnosis/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error("Erreur serveur : " + res.status + " → " + errorText);
+  }
+  return await res.json();
+}

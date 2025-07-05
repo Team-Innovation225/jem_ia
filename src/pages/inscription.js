@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { inscrireUtilisateur } from "../services/api";
+import { inscrireUtilisateur, getProfilUtilisateur } from "../services/api";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../services/firebase";
 
-export default function RegisterPage() {
+export default function RegisterPage({ onSuccess }) {
   const [form, setForm] = useState({
     nom: "",
     prenom: "",
@@ -25,17 +27,18 @@ export default function RegisterPage() {
       if (res.error) {
         setMessage(res.error);
       } else {
-        setMessage("Inscription réussie !");
-        setForm({
-          nom: "",
-          prenom: "",
-          email: "",
-          mot_de_passe: "",
-          role: "patient",
-        });
+        // Connexion automatique après inscription
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          form.email,
+          form.mot_de_passe
+        );
+        const idToken = await userCredential.user.getIdToken();
+        const profil = await getProfilUtilisateur(idToken);
+        if (onSuccess) onSuccess(profil); // Accès direct au chat
       }
     } catch (err) {
-      setMessage("Erreur inconnue lors de l'inscription.");
+      setMessage("Erreur lors de l'inscription ou de la connexion.");
     }
   };
 
