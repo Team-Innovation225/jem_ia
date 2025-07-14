@@ -1,82 +1,145 @@
-export const inscrireUtilisateur = async (userData, idToken) => {
+import { getAuth} from "firebase/auth";
+import { getApp, initializeApp } from "firebase/app";
+
+// import firebase from "firebase/app";
+// import "firebase/auth";
+// import { initializeApp } from "firebase/app";
+// import firebase from "firebase/app";
+// import "firebase/auth";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA1AKqZs8lkFkbX2vMxYX4ytwocrw3hNHs",
+  authDomain: "santeai-b8e44.firebaseapp.com",
+  projectId: "santeai-b8e44",
+  // ...autres paramètres Firebase...
+};
+
+initializeApp(firebaseConfig);
+// ...existing code...
+
+// src/api/diagnose.js
+// export async function converseWithIA(userInput, sessionId = null, context = null, history = null) {
+//   const payload = {
+//     user_input: userInput,
+//     session_id: sessionId,
+//     context: context,
+//     history: history
+//   };
+//   const res = await fetch("https://006d750deaff.ngrok-free.app/ia/chat/", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify(payload)
+//   });
+
+//   if (!res.ok) {
+//     const errorText = await res.text();
+//     throw new Error("Erreur serveur : " + res.status + " → " + errorText);
+//   }
+//   return await res.json();
+// }
+
+// export const loginUtilisateur = async (email, mot_de_passe) => {
+//   try {
+//     const response = await fetch("https://43433959756d.ngrok-free.app/auth/login/", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//       email,
+//       password: mot_de_passe, // <-- adapte ici selon le backend
+      
+//       }),
+//     });
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       return { error: errorData.error || "Identifiants invalides." };
+//     }
+//     return await response.json(); // { idToken }
+//   } catch (error) {
+//     return { error: "Erreur réseau ou serveur" };
+//   }
+// };
+
+
+export async function createStructure(data, idToken) {
+  const response = await fetch("https://564fca1c6c02.ngrok-free.app/admin-form/structure/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${idToken}`,
+      "ngrok-skip-browser-warning": "true"
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Erreur lors de la création de la structure");
+  }
+  return await response.json();
+}
+
+// Inscription patient
+// Fonction d'inscription patient
+export const inscrirePatient = async (userData) => {
   try {
-    const response = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/inscription/", {
+    const auth = getAuth(getApp());
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return { error: "Utilisateur non connecté à Firebase." };
+    }
+
+    const idToken = await currentUser.getIdToken();
+
+    console.log("Jeton Firebase utilisé :", idToken);
+
+    const response = await fetch("https://564fca1c6c02.ngrok-free.app/patient/inscription/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${idToken}`,
+        "Authorization": `Bearer ${idToken}`
       },
       body: JSON.stringify(userData)
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      return { error: errorData.error || "Erreur inconnue" };
+      return {
+        error: errorData.detail || "Erreur lors de l'inscription",
+        status: response.status
+      };
     }
 
     const data = await response.json();
-    return data;
-
+    return { data };
   } catch (error) {
-    return { error: "Erreur réseau ou serveur" };
+    console.error("Erreur d'inscription :", error);
+    return { error: "Erreur réseau ou serveur." };
   }
 };
 
-export const getProfilUtilisateur = async (idToken) => {
+// Connexion patient
+// 📦 Imports Firebase modulaire
+
+// ⚡ Fonction d’authentification + envoi backend
+export const loginPatient = async (email, mot_de_passe) => {
   try {
-    const response = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/profil/", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${idToken}`, // ✅ backticks ajoutés
-        "ngrok-skip-browser-warning": "true"  // ✅ pour ignorer la page HTML ngrok
-      }
+    console.log("📡 Tentative de connexion avec :", email);
+
+    const response = await fetch("https://564fca1c6c02.ngrok-free.app/patient/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, mot_de_passe })
     });
 
-    const contentType = response.headers.get("content-type");
-
+    const result = await response.json();
     if (!response.ok) {
-      if (contentType && contentType.includes("application/json")) {
-        const errorData = await response.json();
-        return { error: errorData.error || "Erreur inconnue" };
-      } else {
-        const errorText = await response.text();
-        console.error("Réponse non JSON (erreur) :", errorText);
-        return { error: errorText || "Erreur inconnue (réponse non JSON)" };
-      }
+      console.error("❌ Erreur reçue du backend :", result.detail);
+      return { error: result.detail || "Erreur inconnue côté serveur" };
     }
 
-    if (contentType && contentType.includes("application/json")) {
-      const data = await response.json();
-      return data;
-    } else {
-      const text = await response.text();
-      console.error("Réponse inattendue du serveur :", text);
-      return { error: "Réponse inattendue du serveur", details: text };
-    }
-
+    console.log("✅ Réponse backend reçue :", result);
+    return result;
   } catch (error) {
-    console.error("Erreur lors de la récupération du profil :", error);
-    return { error: "Erreur réseau ou serveur" };
+    console.error("⛔ Erreur réseau ou fetch :", error);
+    return { error: "Erreur de connexion au serveur" };
   }
 };
-
-// src/api/diagnose.js
-export async function converseWithIA(userInput, sessionId = null, context = null, history = null) {
-  const payload = {
-    user_input: userInput,
-    session_id: sessionId,
-    context: context,
-    history: history
-  };
-  const res = await fetch("https://b077-41-202-89-163.ngrok-free.app/auth/ia/diagnosis/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error("Erreur serveur : " + res.status + " → " + errorText);
-  }
-  return await res.json();
-}

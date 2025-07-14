@@ -1,243 +1,424 @@
 import { useState, useEffect, useRef } from "react";
-import { converseWithIA, getProfilUtilisateur } from "../services/api";
-import { deconnexion } from "../services/firebase";
-import { FaMicrophone, FaPlus } from "react-icons/fa";
+import FilesModal from "./files";
+import { useNavigate } from "react-router-dom";
+import {
+  FaPaperclip,
+  FaUserCircle,
+  FaHospital,
+  FaStethoscope,
+  FaCalendarAlt,
+  FaUpload,
+  FaVideo,
+  FaFileMedical,
+} from "react-icons/fa";
 import { FiArrowUp } from "react-icons/fi";
-import LoginPage from "./login";
-import RegisterPage from "./inscription";
 
 export default function ChatAI() {
-  const [input, setInput] = useState("");
+  const navigate = useNavigate();
+
+  // Données contextuelles (structure, patient, etc.) inchangées
+  const [structure] = useState({ id: 1, nom: "CHR Bouaké" });
+  const [showFiles, setShowFiles] = useState(false);
+  const [interlocuteur] = useState({ nom: "Dr. Koné", type: "medecin" });
+  const [patient] = useState({
+    nom: "Marie Kouassi",
+    age: 32,
+    sexe: "Femme",
+    groupeSanguin: "A+",
+  });
+  const [dernierDiag] = useState({
+    symptomes: "Fièvre, toux",
+    diagnostic: "Grippe saisonnière",
+    date: "10/07/2025",
+    gravite: "Modérée",
+  });
+  const [consultations] = useState([
+    { id: 1, date: "01/07/2025", motif: "Toux", diagnostic: "Rhume" },
+    { id: 2, date: "15/06/2025", motif: "Maux de tête", diagnostic: "Migraine" },
+  ]);
+
+  // --- Partie logique IA/session/feedback adaptée ---
   const [messages, setMessages] = useState([]);
-  const [user, setUser] = useState(null);
+  const [userInput, setUserInput] = useState('');
+  const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [sidebarView, setSidebarView] = useState("welcome"); // "welcome" | "login" | "register"
-  const messagesEndRef = useRef(null);
+  const chatMessagesRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Récupération du profil utilisateur si déjà connecté
+  // URL de votre backend Django
+  const DJANGO_CHAT_URL = 'https://564fca1c6c02.ngrok-free.app/ia/chat/';
+  const DJANGO_FEEDBACK_URL = 'https://564fca1c6c02.ngrok-free.app/ia/feedback/';
+
+  // Scroll fluide
   useEffect(() => {
-    const fetchProfil = async () => {
-      const idToken = localStorage.getItem("idToken");
-      if (idToken) {
-        const profil = await getProfilUtilisateur(idToken);
-        setUser(profil);
-      }
-    };
-    fetchProfil();
+    chatMessagesRef.current?.scrollTo({ top: chatMessagesRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
+
+  // Message initial IA
+  useEffect(() => {
+    setMessages([{
+      id: 'initial-ia-message',
+      sender: 'ia',
+      text: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
+      aiMessageDbId: null,
+      feedback: null
+    }]);
   }, []);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // Envoi message utilisateur
+  const sendMessage = async () => {
+    const message = userInput.trim();
+    if (message === '') return;
 
-  // Déconnexion
-  const handleLogout = async () => {
-    await deconnexion();
-    setUser(null);
-    setSidebarView("login");
-    localStorage.removeItem("idToken");
-  };
-
-  // Chat
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setShowWelcome(false);
-    setMessages((msgs) => [...msgs, { from: "user", text: input }]);
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), sender: 'user', text: message }
+    ]);
+    setUserInput('');
     setLoading(true);
+
     try {
-      const data = await converseWithIA(input);
-      setMessages((msgs) => [
-        ...msgs,
-        { from: "ia", text: data.response },
+      const response = await fetch(DJANGO_CHAT_URL, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message_utilisateur: message, // <-- ici !
+          id_session: sessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la communication avec l\'IA.');
+      }
+
+      const data = await response.json();
+
+      if (!sessionId && data.id_session) {
+        setSessionId(data.id_session);
+        console.log('Nouvelle session ID:', data.id_session);
+      }
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `ia-${data.ai_message_db_id || Date.now()}`,
+          sender: 'ia',
+          text: data.reponse_ia,
+          aiMessageDbId: data.ai_message_db_id,
+          feedback: null
+        }
       ]);
-    } catch (err) {
-      setMessages((msgs) => [
-        ...msgs,
-        { from: "ia", text: err.message || "Erreur lors du diagnostic." },
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message:', error);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: 'ia',
+          text: `Désolé, une erreur est survenue: ${error.message}. Veuillez réessayer.`,
+          aiMessageDbId: null,
+          feedback: null
+        }
       ]);
+    } finally {
+      setLoading(false);
     }
-    setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    setLoading(false);
   };
 
-  // Styles dynamiques pour la sidebar
-  const sidebarWidth = (sidebarView === "login" || sidebarView === "register") ? "640px" : "340px";
-  const sidebarTransition = "width 0.4s cubic-bezier(.4,2,.6,1), background 0.3s";
-  const sidebarBg = (sidebarView === "login" || sidebarView === "register")
-    ? "#e0eafc"
-    : "#f4f6f8";
+  // Feedback IA
+  const handleFeedback = async (messageId, feedbackValue) => {
+    const messageToUpdate = messages.find(msg => msg.id === messageId);
+    if (!messageToUpdate || messageToUpdate.aiMessageDbId === null) {
+      console.warn('Impossible d\'envoyer le feedback: message non trouvé ou pas d\'ID de message DB.');
+      return;
+    }
 
-  const isFormView = sidebarView === "login" || sidebarView === "register";
+    try {
+      const response = await fetch(DJANGO_FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message_id: messageToUpdate.aiMessageDbId,
+          feedback_value: feedbackValue,
+          id_session: sessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de l\'envoi du feedback.');
+      }
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId ? { ...msg, feedback: feedbackValue } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du feedback:', error);
+      alert(`Erreur lors de l'envoi du feedback: ${error.message}`);
+    }
+  };
+
+  // Styles médicaux (inchangés)
+  const colors = {
+    bleu: "#2e7dff",
+    vert: "#38b6ff",
+    blanc: "#fff",
+    gris: "#f7f7f8",
+    grisFonce: "#e0eafc",
+    texte: "#222",
+    accent: "#38b6ff",
+  };
 
   const styles = {
-    layout: {
+    root: {
+      minHeight: "100vh",
+      background: colors.gris,
       display: "flex",
+      flexDirection: "row",
+      alignItems: "stretch",
+      justifyContent: "flex-start",
+      fontFamily: "Segoe UI, Arial, sans-serif",
       height: "100vh",
-      width: "100vw",
-      background: "linear-gradient(120deg, #e0eafc, #cfdef3)",
+      boxSizing: "border-box",
     },
     sidebar: {
-      width: sidebarWidth,
-      minWidth: sidebarWidth,
-      maxWidth: sidebarWidth,
-      overflowY: "auto",
-      background: sidebarBg,
-      borderRight: "1px solid #b3d8f7",
-      padding: isFormView ? "3rem 2.5rem" : "2rem 1.5rem",
-      boxSizing: "border-box",
+      width: 320,
+      minWidth: 260,
+      maxWidth: 340,
+      background: "#fff",
+      borderRadius: "1.5rem 0 0 1.5rem",
+      boxShadow: "2px 0 16px 0 rgba(46,125,255,0.10)",
+      padding: "2rem 1.2rem 1.2rem 1.2rem",
       display: "flex",
       flexDirection: "column",
-      justifyContent: isFormView ? "center" : "space-between", // centrer verticalement pour les formulaires
-      alignItems: "center",
-      minHeight: "100vh",
-      transition: sidebarTransition,
+      gap: "2rem",
+      height: "100vh",
+      position: "sticky",
+      left: 0,
+      top: 0,
+      borderRight: "2px solid #e0eafc",
+      zIndex: 10,
     },
-    sidebarTop: {
-      width: "100%",
+    sidebarScroll: {
       flex: 1,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "flex-start",
-    },
-    sidebarBottom: {
-      width: "100%",
-      marginTop: "2rem",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-    },
-    menuTitle: {
-      fontSize: "1.5rem",
-      color: "#2d3a4b",
-      fontWeight: 700,
+      overflowY: "auto",
+      paddingRight: 8,
       marginBottom: "1.5rem",
-      letterSpacing: "1px",
-      textAlign: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "1.5rem",
     },
-    menuBtn: {
-      width: "100%",
-      padding: "0.8rem",
-      margin: "0.5rem 0",
-      background: "linear-gradient(90deg, #4f8cff, #38b6ff)",
+    sidebarSection: {
+      background: "#f8fafc",
+      borderRadius: "1rem",
+      boxShadow: "0 1px 6px rgba(46,125,255,0.06)",
+      padding: "1.1rem 1rem",
+      marginBottom: "0.5rem",
+      border: "1px solid #e0eafc",
+    },
+    sectionTitle: {
+      fontWeight: 700,
+      color: colors.bleu,
+      fontSize: "1.1rem",
+      marginBottom: "0.7rem",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.5rem",
+    },
+    infoBloc: {
+      fontSize: "1.05rem",
+      color: colors.texte,
+      marginBottom: 0,
+      background: "none",
+      border: "none",
+      padding: 0,
+    },
+    list: {
+      listStyle: "none",
+      padding: 0,
+      margin: 0,
+      fontSize: "1rem",
+    },
+    listItem: {
+      padding: "0.5rem 0",
+      borderBottom: "1px solid #f0f0f0",
+      color: "#333",
+    },
+    upload: {
+      marginTop: "1rem",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.7rem",
+      cursor: "pointer",
+      color: colors.bleu,
+      fontWeight: 600,
+      background: "#f0f9ff",
+      borderRadius: "0.7rem",
+      padding: "0.6rem 1rem",
+      border: "1px solid #bae6fd",
+      boxShadow: "0 1px 4px rgba(46,125,255,0.04)",
+    },
+    sidebarActions: {
+      display: "flex",
+      flexDirection: "row",
+      gap: "1.1rem",
+      justifyContent: "center",
+      marginTop: "1.2rem",
+      paddingTop: "1.2rem",
+      borderTop: "1px solid #e0eafc",
+    },
+    sidebarBtn: {
+      background: colors.bleu,
       color: "#fff",
       border: "none",
-      borderRadius: "8px",
-      fontWeight: 600,
-      fontSize: "1.1rem",
+      borderRadius: "50%",
+      width: 54,
+      height: 54,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "1.5rem",
+      boxShadow: "0 2px 12px rgba(46,125,255,0.13)",
       cursor: "pointer",
-      boxShadow: "0 2px 8px rgba(79,140,255,0.08)",
       transition: "background 0.2s",
     },
-    desc: {
-      fontSize: "1.15rem",
-      color: "#1a2a3a",
-      margin: "1.5rem 0 2rem 0",
-      textAlign: "center",
-      lineHeight: 1.7,
-      fontWeight: 400,
-    },
-    chatRoot: {
+    chatWrapper: {
       flex: 1,
+      background: colors.blanc,
+      borderRadius: "0 1.5rem 1.5rem 0",
+      boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
+      margin: "0 2.5rem 0 0",
       display: "flex",
       flexDirection: "column",
-      alignItems: "center",
-      background: "rgba(193, 218, 243, 0.25)",
-      overflow: "hidden",
-    },
-    chatContainer: {
-      width: "100%",
-      height: "100%",
-      borderRadius: "15px",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
+      minHeight: 600,
+      height: "100vh",
       position: "relative",
-      overflow: "hidden",
-      flex: 1,
+      maxWidth: "100%",
+    },
+    header: {
+      display: "flex",
+      alignItems: "center",
+      gap: "1rem",
+      padding: "1.2rem 2rem",
+      borderBottom: `1px solid ${colors.grisFonce}`,
+      background: colors.gris,
+      borderTopLeftRadius: 18,
+      borderTopRightRadius: 18,
+      position: "sticky",
+      top: 0,
+      zIndex: 2,
+    },
+    avatar: {
+      background: colors.bleu,
+      color: "#fff",
+      borderRadius: "50%",
+      width: 44,
+      height: 44,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "1.6rem",
+    },
+    interlocuteur: {
+      fontWeight: 700,
+      fontSize: "1.15rem",
+      color: colors.bleu,
+    },
+    structure: {
+      color: colors.vert,
+      fontWeight: 600,
+      fontSize: "1.05rem",
+      marginLeft: 8,
     },
     chatArea: {
-      width: "100%",
-      maxWidth: "600px",
       flex: 1,
-      minHeight: 0,
-      margin: "3rem auto 0 auto",
-      padding: "2rem 0 1.5rem 0",
+      overflowY: "auto",
+      padding: "2rem 1.5rem 1rem 1.5rem",
       display: "flex",
       flexDirection: "column",
       gap: "1.2rem",
-      overflowY: "auto",
-      scrollbarWidth: "none",
-      msOverflowStyle: "none",
-      paddingBottom: "90px",
+      background: colors.gris,
+      position: "relative",
     },
     msgRow: {
       display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-end",
       width: "100%",
-      marginBottom: "0.5rem",
     },
-    msgUser: {
-      marginLeft: "auto",
-      background: "linear-gradient(90deg, #b3d8f7, #c1daf3)",
-      color: "#1a2a3a",
-      borderRadius: "18px 18px 4px 18px",
-      padding: "1.1rem 1.5rem",
-      maxWidth: "80%",
-      fontSize: "1.13rem",
-      boxShadow: "0 2px 12px rgba(79,140,255,0.10)",
+    msgBubbleUser: {
+      background: colors.bleu,
+      color: "#fff",
+      borderRadius: "14px 14px 4px 14px",
+      padding: "1rem 1.3rem",
+      maxWidth: "70%",
       alignSelf: "flex-end",
-      wordBreak: "break-word",
-      border: "1px solid #b3d8f7",
+      fontSize: "1.08rem",
       fontWeight: 500,
-    },
-    msgIA: {
-      width: "100%",
-      background: "transparent",
-      color: "#2d3a4b",
-      borderRadius: 0,
-      padding: "0.5rem 0",
-      fontSize: "1.05rem",
-      boxShadow: "none",
-      alignSelf: "stretch",
+      boxShadow: "0 2px 8px rgba(46,125,255,0.08)",
       wordBreak: "break-word",
-      border: "none",
-      fontWeight: 700,
-      fontFamily: "inherit",
+    },
+    msgBubbleOther: {
+      background: colors.blanc,
+      color: colors.texte,
+      borderRadius: "14px 14px 14px 4px",
+      padding: "1rem 1.3rem",
+      maxWidth: "70%",
+      alignSelf: "flex-start",
+      fontSize: "1.08rem",
+      fontWeight: 500,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      wordBreak: "break-word",
+    },
+    timestamp: {
+      fontSize: "0.85rem",
+      color: "#aaa",
+      marginTop: "0.2rem",
+      alignSelf: "flex-end",
+    },
+    timestampOther: {
+      alignSelf: "flex-start",
+    },
+    typing: {
+      fontStyle: "italic",
+      color: colors.vert,
+      fontSize: "1rem",
+      marginLeft: 8,
+      marginBottom: 8,
     },
     inputBarWrapper: {
-      width: "100%",
-      display: "flex",
-      justifyContent: "center",
-      background: "transparent",
-      zIndex: 10,
-      paddingBottom: "1.5rem",
-      transition: sidebarTransition,
+      padding: "1.2rem 1.5rem",
+      borderTop: `1px solid ${colors.grisFonce}`,
+      background: colors.gris,
+      borderBottomLeftRadius: 18,
+      borderBottomRightRadius: 18,
+      position: "sticky",
+      bottom: 0,
+      zIndex: 2,
     },
     inputBar: {
-      background: "#fff",
-      borderRadius: "20px",
-      boxShadow: "0 1px 6px rgba(0,0,0,0.1)",
-      width: "100%",
-      maxWidth: "600px",
+      background: colors.blanc,
+      borderRadius: 12,
+      boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
       display: "flex",
       alignItems: "flex-end",
-      padding: "0.6rem 1rem",
+      padding: "0.5rem 1rem",
       gap: "0.5rem",
-      border: "1px solid #e0e0e0",
+      border: `1px solid ${colors.grisFonce}`,
     },
     inputChat: {
       flex: 1,
       border: "none",
       outline: "none",
-      fontSize: "1rem",
+      fontSize: "1.08rem",
       background: "transparent",
       resize: "none",
-      minHeight: "24px",
-      maxHeight: "150px",
+      minHeight: "28px",
+      maxHeight: "120px",
       overflowY: "auto",
     },
     iconBtn: {
@@ -245,8 +426,7 @@ export default function ChatAI() {
       border: "none",
       fontSize: "1.35rem",
       cursor: "pointer",
-      margin: "0 0.3rem",
-      color: "#4f8cff",
+      color: colors.bleu,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -260,173 +440,254 @@ export default function ChatAI() {
       fontWeight: 600,
       fontSize: "1.1rem",
       cursor: "pointer",
-      transition: "background 0.2s",
-      opacity: 1,
-      marginLeft: "0.2rem",
-      background: "rgba(1, 45, 128, 0.85)",
-    },
-    welcome: {
-      margin: "auto",
-      textAlign: "center",
-      fontSize: "2.1rem",
-      fontWeight: 700,
-      color: "#2d3a4b",
-      letterSpacing: "1px",
-      opacity: 0.9,
-      lineHeight: 1.5,
-      background: "rgba(255,255,255,0.8)",
-      borderRadius: "18px",
-      padding: "2.5rem 2rem",
-      boxShadow: "0 2px 24px rgba(79,140,255,0.10)",
-      maxWidth: "600px",
+      background: colors.bleu,
+      color: "#fff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     },
   };
 
-  // --- Sidebar content ---
-  function SidebarContent() {
-    if (user) {
-      return (
-        <div style={styles.sidebarTop}>
-          <div style={styles.menuTitle}>
-            Bonjour, <span style={{ color: "#4f8cff" }}>{user.prenom || user.nom || "Utilisateur"}</span>
-          </div>
-        </div>
-      );
-    }
-    if (sidebarView === "login") {
-      return (
-        <LoginPage
-          onSuccess={async (profil) => {
-            setUser(profil);           // Active le chat
-            setSidebarView("welcome"); // Rétracte la sidebar
-          }}
-        />
-      );
-    }
-    if (sidebarView === "register") {
-      return (
-        <RegisterPage
-          onSuccess={profil => {
-            setUser(profil);           // Active le chat
-            setSidebarView("welcome"); // Rétracte la sidebar
-          }}
-        />
-      );
-    }
-    // Vue d'accueil sidebar
-    return (
-      <div style={styles.sidebarTop}>
-        <div style={styles.menuTitle}>Bienvenue sur SanteAI</div>
-        <div style={styles.desc}>
-          Votre assistant IA pour le diagnostic et le conseil santé.<br />
-          <b>Connectez-vous</b> ou <b>créez un compte</b> pour commencer à discuter avec notre intelligence artificielle médicale.
-        </div>
-        <button style={styles.menuBtn} onClick={() => setSidebarView("login")}>Se connecter</button>
-        <button style={styles.menuBtn} onClick={() => setSidebarView("register")}>Créer un compte</button>
-      </div>
-    );
-  }
-
   return (
-    <div style={styles.layout}>
-      {/* Colonne gauche : menu, login, inscription */}
-      <div style={styles.sidebar}>
-        <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
-          <SidebarContent />
+    <div style={styles.root}>
+      {showFiles && <FilesModal onClose={() => setShowFiles(false)} />}
+      {/* Sidebar à gauche */}
+      <aside style={styles.sidebar}>
+        <div style={styles.sidebarScroll}>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sectionTitle}>
+              <FaHospital /> Structure
+            </div>
+            <div style={styles.infoBloc}>{structure.nom}</div>
+          </div>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sectionTitle}>
+              <FaUserCircle /> Patient
+            </div>
+            <div style={styles.infoBloc}>
+              <b>{patient.nom}</b>
+              <br />
+              Âge : {patient.age} ans
+              <br />
+              Sexe : {patient.sexe}
+              <br />
+              Groupe sanguin : {patient.groupeSanguin}
+            </div>
+          </div>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sectionTitle}>
+              <FaStethoscope /> Dernier diagnostic IA
+            </div>
+            <div style={styles.infoBloc}>
+              <b>{dernierDiag.diagnostic}</b>{" "}
+              <span style={{ color: "#e53e3e", fontWeight: 600 }}>
+                ({dernierDiag.gravite})
+              </span>
+              <br />
+              Symptômes : {dernierDiag.symptomes}
+              <br />
+              Date : {dernierDiag.date}
+            </div>
+          </div>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sectionTitle}>
+              <FaCalendarAlt /> Consultations récentes
+            </div>
+            <ul style={styles.list}>
+              {consultations.map((c) => (
+                <li key={c.id} style={styles.listItem}>
+                  <b>{c.date}</b> — {c.motif}{" "}
+                  <span style={{ color: "#888" }}>({c.diagnostic})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={styles.upload}>
+            <FaUpload />
+            <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
+              Téléverser un document médical
+            </label>
+            <input id="file-upload" type="file" style={{ display: "none" }} />
+          </div>
         </div>
-        {user && (
-          <div style={styles.sidebarBottom}>
-            <button style={{ ...styles.menuBtn, background: "#e53e3e" }} onClick={handleLogout}>
-              Déconnexion
-            </button>
+        {/* Actions flottantes en bas de la sidebar */}
+        <div style={styles.sidebarActions}>
+          <button style={styles.sidebarBtn} title="Profil patient">
+            <FaUserCircle size={26} />
+          </button>
+          <button
+            style={styles.sidebarBtn}
+            title="Documents médicaux"
+            onClick={() => setShowFiles(true)}
+          >
+            <FaFileMedical size={24} />
+          </button>
+          <button
+            style={styles.sidebarBtn}
+            title="Téléconsultation"
+            onClick={() => navigate("/tv_consuting")}
+          >
+            <FaVideo size={24} />
+          </button>
+        </div>
+      </aside>
+      {/* Chat principal à droite */}
+      <div style={styles.chatWrapper}>
+        {/* En-tête contextualisée */}
+        <div style={styles.header}>
+          <div style={styles.avatar}>
+            <FaUserCircle />
           </div>
-        )}
-      </div>
-      {/* Colonne droite : chat */}
-      <div style={styles.chatRoot}>
-        <div style={styles.chatContainer}>
-          <div style={styles.chatArea}>
-            {showWelcome && messages.length === 0 ? (
-              <div style={styles.welcome}>
-                <span role="img" aria-label="santé">🩺</span> Bienvenue sur <span style={{ color: "#4f8cff" }}>SanteAI</span> !<br />
-                <div style={styles.desc}>
-                  SanteAI est une intelligence artificielle dédiée à votre santé.<br />
-                  Posez vos questions, décrivez vos symptômes ou demandez des conseils médicaux.<br />
-                  <b>Attention :</b> Les réponses fournies ne remplacent pas un avis médical professionnel.
-                </div>
-                {!user && (
-                  <div style={{ marginTop: "2rem", fontSize: "1.1rem" }}>
-                    <b>Veuillez vous connecter ou créer un compte pour commencer.</b>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
+          <div>
+            <span style={styles.interlocuteur}>{interlocuteur.nom}</span>
+            <span style={styles.structure}>— {structure.nom}</span>
+          </div>
+        </div>
+        {/* Fil de discussion */}
+        <div
+          style={styles.chatArea}
+          ref={chatMessagesRef}
+        >
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              style={{
+                ...styles.msgRow,
+                alignItems: msg.sender === "user" ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                style={msg.sender === "user" ? styles.msgBubbleUser : styles.msgBubbleOther}
+                dangerouslySetInnerHTML={{
+                  __html: msg.text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
+                }}
+              />
+              {/* Feedback IA */}
+              {msg.sender === "ia" && msg.aiMessageDbId !== null && (
+                <div style={{
+                  display: "flex",
+                  gap: 6,
+                  marginTop: 4,
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  fontSize: "0.92rem",
+                  minHeight: 28,
+                }}>
+                  <button
+                    onClick={() => handleFeedback(msg.id, 1)}
                     style={{
-                      ...styles.msgRow,
-                      justifyContent: msg.from === "user" ? "flex-end" : "flex-start",
+                      padding: 3,
+                      borderRadius: "50%",
+                      fontSize: 15,
+                      background: msg.feedback === 1 ? "#22c55e" : "#e0eafc",
+                      color: msg.feedback === 1 ? "#fff" : "#2563eb",
+                      border: "none",
+                      cursor: msg.feedback !== null ? "not-allowed" : "pointer",
+                      opacity: msg.feedback !== null ? 0.6 : 1,
+                      transition: "background 0.2s",
+                      width: 28,
+                      height: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
+                    title="Utile"
+                    disabled={loading || msg.feedback !== null}
                   >
-                    <div style={msg.from === "user" ? styles.msgUser : styles.msgIA}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
-          {/* Barre de saisie */}
-          {user && (
-            <div style={styles.inputBarWrapper}>
-              <form
-                onSubmit={handleSubmit}
+                    👍
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(msg.id, 0)}
+                    style={{
+                      padding: 3,
+                      borderRadius: "50%",
+                      fontSize: 15,
+                      background: msg.feedback === 0 ? "#ef4444" : "#e0eafc",
+                      color: msg.feedback === 0 ? "#fff" : "#2563eb",
+                      border: "none",
+                      cursor: msg.feedback !== null ? "not-allowed" : "pointer",
+                      opacity: msg.feedback !== null ? 0.6 : 1,
+                      transition: "background 0.2s",
+                      width: 28,
+                      height: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Pas utile"
+                    disabled={loading || msg.feedback !== null}
+                  >
+                    👎
+                  </button>
+                  {msg.feedback !== null && (
+                    <span style={{
+                      fontSize: "0.85rem",
+                      color: "#22c55e",
+                      marginLeft: 6,
+                      fontWeight: 500,
+                    }}>
+                      Merci pour votre retour
+                    </span>
+                  )}
+                </div>
+              )}
+              <div
                 style={{
-                  ...styles.inputBar,
-                  opacity: loading ? 0.7 : 1,
-                  pointerEvents: loading ? "none" : "auto",
+                  ...styles.timestamp,
+                  ...(msg.sender === "user" ? {} : styles.timestampOther),
                 }}
               >
-                <button type="button" style={styles.iconBtn} tabIndex={-1} aria-label="Ajouter">
-                  <FaPlus size={18} color="#4f8cff" />
-                </button>
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={e => {
-                    setInput(e.target.value);
-                    if (textareaRef.current) {
-                      textareaRef.current.style.height = "auto";
-                      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-                    }
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e);
-                    }
-                  }}
-                  placeholder="Message SanteAI..."
-                  rows={1}
-                  style={{
-                    ...styles.inputChat,
-                    width: input.length > 0 ? undefined : "80px",
-                  }}
-                />
-                <button type="button" style={styles.iconBtn} tabIndex={-1} aria-label="Micro">
-                  <FaMicrophone size={20} color="#4f8cff" />
-                </button>
-                {input.trim() && (
-                  <button type="submit" style={styles.button} aria-label="Envoyer">
-                    <FiArrowUp size={20} color="white" />
-                  </button>
-                )}
-              </form>
+                {/* Affiche l'heure si tu veux, sinon laisse vide */}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ ...styles.msgRow, alignItems: "flex-start" }}>
+              <div style={styles.typing}>L'IA réfléchit...</div>
             </div>
           )}
+        </div>
+        {/* Barre de saisie */}
+        <div style={styles.inputBarWrapper}>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              sendMessage();
+            }}
+            style={{
+              ...styles.inputBar,
+              opacity: loading ? 0.7 : 1,
+              pointerEvents: loading ? "none" : "auto",
+            }}
+          >
+            <button type="button" style={styles.iconBtn} tabIndex={-1} aria-label="Pièce jointe">
+              <FaPaperclip size={18} />
+            </button>
+            <textarea
+              ref={textareaRef}
+              value={userInput}
+              onChange={e => {
+                setUserInput(e.target.value);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                  textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+                }
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Votre message..."
+              rows={1}
+              style={styles.inputChat}
+              disabled={loading}
+            />
+            <button type="submit" style={styles.button} aria-label="Envoyer" disabled={loading}>
+              <FiArrowUp size={20} color="white" />
+            </button>
+          </form>
         </div>
       </div>
     </div>
