@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { inscrirePatient, loginPatient } from "../services/api";
+// Import the new getPatientProfile function along with the existing ones
+import { inscrirePatient, loginPatient, getPatientProfile } from "../services/api"; // Make sure getPatientProfile is exported from your api.js
 import { motion, AnimatePresence } from "framer-motion";
 import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -329,6 +330,7 @@ function MagicDivider({ screen }) {
   );
 }
 
+// Ensure these paths are correct relative to your public directory
 const doctorURL = process.env.PUBLIC_URL + "/doctor_signup.svg";
 const questionsImgURL = process.env.PUBLIC_URL + "/Questions-rafiki.svg";
 const questionsVideoURL = process.env.PUBLIC_URL + "/Questions.mp4";
@@ -439,7 +441,7 @@ function LandingVideo({ screen }) {
   );
 }
 
-// Ajout du style responsive pour masquer sur mobile
+// Add responsive style to hide on mobile
 if (!document.getElementById("assistant-img-style")) {
   const styleTag = document.createElement("style");
   styleTag.id = "assistant-img-style";
@@ -468,6 +470,18 @@ if (!document.getElementById("assistant-img-style")) {
 
 const FORM_MAX = { width: "min(92%,420px)" };
 
+// Helper function to calculate age (moved outside component for reusability)
+function calculerAge(dateNaissance) {
+  const naissance = new Date(dateNaissance);
+  const aujourdHui = new Date();
+  let age = aujourdHui.getFullYear() - naissance.getFullYear();
+  const m = aujourdHui.getMonth() - naissance.getMonth();
+  if (m < 0 || (m === 0 && aujourdHui.getDate() < naissance.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export default function AuthPage() {
   const [screen, setScreen] = useState("landing");
   const [signup, setSignup] = useState({
@@ -481,12 +495,12 @@ export default function AuthPage() {
     confirmation_mot_de_passe: "",
     cgu: false,
   });
-  const [login, setLogin] = useState({ courriel: "", mot_de_passe: "" }); // <-- correction ici
+  const [login, setLogin] = useState({ courriel: "", mot_de_passe: "" });
   const [error, setError] = useState("");
   const inputRefs = useRef([]);
   const navigate = useNavigate();
 
-  // Animation variants
+  // Animation variants (unchanged)
   const variants = {
     landing: {
       initial: { opacity: 0, x: 0 },
@@ -505,110 +519,143 @@ export default function AuthPage() {
     },
   };
 
-  // Handlers
+  // Handlers (unchanged)
   const handleStart = () => setScreen("signup");
   const handleToLogin = () => setScreen("login");
   const handleToSignup = () => setScreen("signup");
   const handleBackLanding = () => setScreen("landing");
 
-  // Signup submit
+  // --- UPDATED handleSignup (Registration) ---
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (signup.mot_de_passe !== signup.confirmation_mot_de_passe) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    if (!signup.cgu) {
+      setError("Veuillez accepter les CGU.");
+      return;
+    }
+
     try {
       const auth = getAuth();
-      await createUserWithEmailAndPassword(auth, signup.email, signup.mot_de_passe);
-      // Appel backend après création Firebase
+      // 1. Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, signup.email, signup.mot_de_passe);
+      const user = userCredential.user; // The Firebase User object
+
+      // 2. Get Firebase ID token to send to the Django backend
+      const idToken = await user.getIdToken();
+      console.log("Jeton Firebase pour l'inscription:", idToken);
+
+      // 3. Call Django backend to "register" the patient
+      // The backend uses the ID token (sent via Authorization header by your `inscrirePatient` function)
+      // to link this Firebase user to a Django profile.
       const res = await inscrirePatient({
         nom: signup.nom,
         prenom: signup.prenom,
         date_naissance: signup.date_naissance,
         genre: signup.genre,
         numero_telephone: signup.numero_telephone,
-        email: signup.email,
-        mot_de_passe: signup.mot_de_passe,
-        confirmation: signup.confirmation_mot_de_passe
+        email: signup.email, // Email from Firebase can be sent here for syncing if needed
+        // The password is NOT sent to the Django backend directly here; Firebase handles it
       });
+
       if (res.error) {
+        // Handle error if Django backend returns an error after Firebase registration
         setError(res.error);
+        // Optional: If Django registration fails after Firebase, you might want to
+        // delete the Firebase user to avoid orphaned accounts.
+        // await user.delete();
         return;
       }
-      // Après inscription ou connexion réussie
-      const patientData = res.data; // ou res selon ton API
 
-      // Calcul de l'âge à partir de la date de naissance
-      function calculerAge(dateNaissance) {
-        const naissance = new Date(dateNaissance);
-        const aujourdHui = new Date();
-        let age = aujourdHui.getFullYear() - naissance.getFullYear();
-        const m = aujourdHui.getMonth() - naissance.getMonth();
-        if (m < 0 || (m === 0 && aujourdHui.getDate() < naissance.getDate())) {
-          age--;
-        }
-        return age;
+      // 4. Store the Firebase ID token and UID after successful registration
+      localStorage.setItem('firebaseIdToken', idToken);
+      localStorage.setItem('userUid', user.uid); // Use the Firebase user's UID
+
+      // 5. Fetch the complete patient profile from the Django backend
+      // This is the NEW step to get `date_naissance` and other details.
+      const patientProfilComplet = await getPatientProfile(user.uid, idToken);
+
+      if (patientProfilComplet.error) {
+        setError(patientProfilComplet.error);
+        return;
       }
 
-      const patientProfil = {
-        ...patientData,
-        age: calculerAge(patientData.date_naissance),
+      // If everything is good, add the calculated age to the complete patient profile object
+      const finalPatientData = {
+        ...patientProfilComplet,
+        age: calculerAge(patientProfilComplet.date_naissance) // `date_naissance` should be present here
       };
 
-      // Redirection vers la page patient avec les données
-      navigate("/patient", { state: { patient: patientProfil } });
+      // Redirect to the patient page with the complete data
+      navigate("/patient", { state: { patient: finalPatientData } });
+
     } catch (error) {
+      // Handle Firebase authentication errors (email already in use, weak password, etc.)
       if (error.code === "auth/email-already-in-use") {
         setError("Cet email est déjà utilisé. Veuillez vous connecter ou utiliser un autre email.");
+      } else if (error.code === "auth/weak-password") {
+        setError("Le mot de passe est trop faible. Il doit contenir au moins 6 caractères.");
       } else {
         setError(error.message);
       }
-      console.error(error.code, error.message);
+      console.error("Erreur d'inscription Firebase ou Backend:", error.code, error.message);
     }
   };
 
-  // Login submit
+  // --- UPDATED handleLogin (Login) ---
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!login.courriel || !login.mot_de_passe) { // <-- correction ici
+    if (!login.courriel || !login.mot_de_passe) {
       setError("Tous les champs sont requis.");
       return;
     }
-    if (login.mot_de_passe.length < 6) {
-      setError("Mot de passe trop court.");
-      return;
-    }
+    // Password length validation can be left to Firebase / backend
     setError("");
 
-    // Appel API backend
-    const res = await loginPatient(login.courriel, login.mot_de_passe); // <-- correction ici
-    if (res.error) {
-      setError(res.error);
-      return;
-    }
-    // Après inscription ou connexion réussie
-    const patientData = res.data; // ou res selon ton API
+    try {
+      // 1. Call the `loginPatient` function (from api.js)
+      // This function now handles Firebase authentication and returns the ID token and UID.
+      const res = await loginPatient(login.courriel, login.mot_de_passe);
 
-    // Calcul de l'âge à partir de la date de naissance
-    function calculerAge(dateNaissance) {
-      const naissance = new Date(dateNaissance);
-      const aujourdHui = new Date();
-      let age = aujourdHui.getFullYear() - naissance.getFullYear();
-      const m = aujourdHui.getMonth() - naissance.getMonth();
-      if (m < 0 || (m === 0 && aujourdHui.getDate() < naissance.getDate())) {
-        age--;
+      if (res.error) {
+        setError(res.error); // Error comes directly from `loginPatient` (Firebase)
+        return;
       }
-      return age;
+
+      // 2. Store the Firebase ID token and UID after successful login
+      localStorage.setItem('firebaseIdToken', res.idToken);
+      localStorage.setItem('userUid', res.uid); // Firebase user's UID
+
+      // 3. Fetch the complete patient profile from the Django backend
+      // Use the Firebase user's UID (res.uid) and the ID token (res.idToken).
+      const patientProfilComplet = await getPatientProfile(res.uid, res.idToken);
+
+      if (patientProfilComplet.error) {
+        setError(patientProfilComplet.error);
+        return;
+      }
+
+      // If everything is good, add the calculated age to the complete patient profile object
+      const finalPatientData = {
+        ...patientProfilComplet,
+        age: calculerAge(patientProfilComplet.date_naissance) // `date_naissance` should be present here
+      };
+
+      // 4. Redirect to the patient page with the complete data
+      navigate("/patient", { state: { patientProfile: finalPatientData } });
+
+    } catch (error) {
+      // This will catch any unexpected errors not handled by `loginPatient` or `getPatientProfile`
+      setError("Une erreur inattendue est survenue lors de la connexion.");
+      console.error("Erreur inattendue dans handleLogin:", error);
     }
-
-    const patientProfil = {
-      ...patientData,
-      age: calculerAge(patientData.date_naissance),
-    };
-
-    // Redirection vers la page patient avec les données
-    navigate("/patient", { state: { patient: patientProfil } });
   };
 
-  // Micro-interaction underline animée
+  // Micro-interaction underline animée (unchanged)
   const handleFocus = (idx) => {
     if (inputRefs.current[idx]) inputRefs.current[idx].classList.add("is-focus");
   };
@@ -914,11 +961,11 @@ export default function AuthPage() {
                   type="email"
                   aria-label="Courriel"
                   placeholder="Courriel"
-                  value={login.courriel} // <-- correction ici
+                  value={login.courriel}
                   ref={el => (inputRefs.current[6] = el)}
                   onFocus={() => handleFocus(6)}
                   onBlur={() => handleBlur(6)}
-                  onChange={e => setLogin(l => ({ ...l, courriel: e.target.value }))} // <-- correction ici
+                  onChange={e => setLogin(l => ({ ...l, courriel: e.target.value }))}
                   required
                 />
                 <span className="auth__input-anim" />

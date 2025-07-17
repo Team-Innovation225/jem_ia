@@ -3,45 +3,45 @@ import FilesModal from "./files";
 import { useNavigate } from "react-router-dom";
 import {
   FaPaperclip,
-  FaUserCircle,
-  FaHospital,
-  FaStethoscope,
-  FaCalendarAlt,
-  FaUpload,
   FaVideo,
   FaFileMedical,
+  FaMicrophone,
+  FaUserMd,
+  FaNotesMedical,
 } from "react-icons/fa";
 import { FiArrowUp } from "react-icons/fi";
+import AudioChatAI from "./AudioChatAI"; // Assurez-vous que le chemin est correct
 
 export default function ChatAI() {
   const navigate = useNavigate();
 
   // Données contextuelles (structure, patient, etc.) inchangées
-  const [structure] = useState({ id: 1, nom: "CHR Bouaké" });
+  // const [structure] = useState({ id: 1, nom: "CHR Bouaké" });
   const [showFiles, setShowFiles] = useState(false);
-  const [interlocuteur] = useState({ nom: "Dr. Koné", type: "medecin" });
-  const [patient] = useState({
-    nom: "Marie Kouassi",
-    age: 32,
-    sexe: "Femme",
-    groupeSanguin: "A+",
-  });
-  const [dernierDiag] = useState({
-    symptomes: "Fièvre, toux",
-    diagnostic: "Grippe saisonnière",
-    date: "10/07/2025",
-    gravite: "Modérée",
-  });
-  const [consultations] = useState([
-    { id: 1, date: "01/07/2025", motif: "Toux", diagnostic: "Rhume" },
-    { id: 2, date: "15/06/2025", motif: "Maux de tête", diagnostic: "Migraine" },
-  ]);
+  // const [interlocuteur] = useState({ nom: "Dr. Koné", type: "medecin" });
+  // const [patient] = useState({
+  //   nom: "Marie Kouassi",
+  //   age: 32,
+  //   sexe: "Femme",
+  //   groupeSanguin: "A+",
+  // });
+  // const [dernierDiag] = useState({
+  //   symptomes: "Fièvre, toux",
+  //   diagnostic: "Grippe saisonnière",
+  //   date: "10/07/2025",
+  //   gravite: "Modérée",
+  // });
+  // const [consultations] = useState([
+  //   { id: 1, date: "01/07/2025", motif: "Toux", diagnostic: "Rhume" },
+  //   { id: 2, date: "15/06/2025", motif: "Maux de tête", diagnostic: "Migraine" },
+  // ]);
 
   // --- Partie logique IA/session/feedback adaptée ---
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showAudioPage, setShowAudioPage] = useState(false);
   const chatMessagesRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -450,97 +450,74 @@ export default function ChatAI() {
 
   return (
     <div style={styles.root}>
-      {showFiles && <FilesModal onClose={() => setShowFiles(false)} />}
-      {/* Sidebar à gauche */}
-      <aside style={styles.sidebar}>
-        <div style={styles.sidebarScroll}>
-          <div style={styles.sidebarSection}>
-            <div style={styles.sectionTitle}>
-              <FaHospital /> Structure
-            </div>
-            <div style={styles.infoBloc}>{structure.nom}</div>
-          </div>
-          <div style={styles.sidebarSection}>
-            <div style={styles.sectionTitle}>
-              <FaUserCircle /> Patient
-            </div>
-            <div style={styles.infoBloc}>
-              <b>{patient.nom}</b>
-              <br />
-              Âge : {patient.age} ans
-              <br />
-              Sexe : {patient.sexe}
-              <br />
-              Groupe sanguin : {patient.groupeSanguin}
-            </div>
-          </div>
-          <div style={styles.sidebarSection}>
-            <div style={styles.sectionTitle}>
-              <FaStethoscope /> Dernier diagnostic IA
-            </div>
-            <div style={styles.infoBloc}>
-              <b>{dernierDiag.diagnostic}</b>{" "}
-              <span style={{ color: "#e53e3e", fontWeight: 600 }}>
-                ({dernierDiag.gravite})
-              </span>
-              <br />
-              Symptômes : {dernierDiag.symptomes}
-              <br />
-              Date : {dernierDiag.date}
-            </div>
-          </div>
-          <div style={styles.sidebarSection}>
-            <div style={styles.sectionTitle}>
-              <FaCalendarAlt /> Consultations récentes
-            </div>
-            <ul style={styles.list}>
-              {consultations.map((c) => (
-                <li key={c.id} style={styles.listItem}>
-                  <b>{c.date}</b> — {c.motif}{" "}
-                  <span style={{ color: "#888" }}>({c.diagnostic})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div style={styles.upload}>
-            <FaUpload />
-            <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
-              Téléverser un document médical
-            </label>
-            <input id="file-upload" type="file" style={{ display: "none" }} />
-          </div>
+      {/* Flèche retour */}
+      {showFiles && (
+        <div
+          style={{
+            position: "fixed",
+            top: "70px",
+            right: "70px",
+            width: 420,
+            height: 420,
+            background: "#fff",
+            borderRadius: "1.2rem",
+            boxShadow: "0 4px 32px #38b6ff33",
+            zIndex: 9999,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          <FilesModal onClose={() => setShowFiles(false)} />
         </div>
-        {/* Actions flottantes en bas de la sidebar */}
-        <div style={styles.sidebarActions}>
-          <button style={styles.sidebarBtn} title="Profil patient">
-            <FaUserCircle size={26} />
-          </button>
-          <button
-            style={styles.sidebarBtn}
-            title="Documents médicaux"
-            onClick={() => setShowFiles(true)}
-          >
-            <FaFileMedical size={24} />
-          </button>
-          <button
-            style={styles.sidebarBtn}
-            title="Téléconsultation"
-            onClick={() => navigate("/tv_consuting")}
-          >
-            <FaVideo size={24} />
-          </button>
-        </div>
-      </aside>
+      )}
       {/* Chat principal à droite */}
       <div style={styles.chatWrapper}>
-        {/* En-tête contextualisée */}
-        <div style={styles.header}>
-          <div style={styles.avatar}>
-            <FaUserCircle />
+        {/* En-tête contextualisée + actions */}
+        <div style={{
+          ...styles.header,
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "1.5rem"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={styles.avatar}>
+              <FaNotesMedical />
+            </div>
+            <div>
+              <span style={{
+                fontStyle: "italic",
+                fontWeight: 600,
+                fontSize: "1.15rem",
+                color: colors.bleu,
+              }}>
+                SanteAI
+              </span>
+            </div>
           </div>
-          <div>
-            <span style={styles.interlocuteur}>{interlocuteur.nom}</span>
-            <span style={styles.structure}>— {structure.nom}</span>
+          {/* Actions en haut à droite */}
+          <div style={{ display: "flex", gap: "1.1rem" }}>
+            <button
+              style={styles.sidebarBtn}
+              title="Dossiers patient"
+              onClick={() => setShowFiles(true)}
+            >
+              <FaFileMedical size={24} />
+            </button>
+            <button
+              style={styles.sidebarBtn}
+              title="Téléconsultation"
+              onClick={() => navigate("/tv_consuting")}
+            >
+              <FaVideo size={24} />
+            </button>
+            <button
+              style={styles.sidebarBtn}
+              title="Chat avec le médecin"
+              onClick={() => navigate("/chat_medecin")}
+            >
+              <FaUserMd size={26} />
+            </button>
           </div>
         </div>
         {/* Fil de discussion */}
@@ -660,6 +637,15 @@ export default function ChatAI() {
               pointerEvents: loading ? "none" : "auto",
             }}
           >
+            <button
+              type="button"
+              style={styles.iconBtn}
+              tabIndex={-1}
+              aria-label="Enregistrer un audio"
+              onClick={() => alert("Fonction d'enregistrement audio à venir")}
+            >
+              <FaMicrophone size={18} />
+            </button>
             <button type="button" style={styles.iconBtn} tabIndex={-1} aria-label="Pièce jointe">
               <FaPaperclip size={18} />
             </button>
@@ -684,12 +670,63 @@ export default function ChatAI() {
               style={styles.inputChat}
               disabled={loading}
             />
+            {/* Bouton rond avec onde sonore */}
+            <button
+              type="button"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                border: "2px solid #fff", // Bordure blanche
+                outline: "none",
+                background: "transparent", // Fond vide
+                boxShadow: "0 2px 12px #e0eafc44",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "border 0.2s, box-shadow 0.2s",
+                marginRight: 8,
+                padding: 0,
+              }}
+              title="Démarrer une conversation audio avec l'IA"
+              onClick={() => setShowAudioPage(true)}
+            >
+              <img
+                src="/voice-message.png"
+                alt="Appel vocal"
+                style={{
+                  width: 28,
+                  height: 28,
+                  objectFit: "contain",
+                  borderRadius: "50%",
+                  display: "block",
+                }}
+              />
+            </button>
             <button type="submit" style={styles.button} aria-label="Envoyer" disabled={loading}>
               <FiArrowUp size={20} color="white" />
             </button>
           </form>
         </div>
+        {/* Affichage conditionnel de la page audio */}
+        {showAudioPage && (
+          <AudioChatAI onClose={() => setShowAudioPage(false)} />
+        )}
       </div>
     </div>
   );
 }
+
+/*
+@keyframes wave {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  70% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.1; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 4px #e0eafc; }
+  70% { box-shadow: 0 0 0 12px #e0eafc44; }
+  100% { box-shadow: 0 0 0 4px #e0eafc; }
+}
+*/

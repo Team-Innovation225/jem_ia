@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaUserMd, FaUserCircle, FaStethoscope, FaNotesMedical, FaClock, FaPaperPlane, FaFilePrescription, FaCheck } from "react-icons/fa";
+import { FaUserMd, FaUserCircle, FaStethoscope, FaClock, FaPaperPlane, FaFileMedical, FaCommentDots, FaCheck } from "react-icons/fa";
 
 export default function Teleconsultation() {
   // Données fictives
-  const [structure] = useState({ id: 1, nom: "CHU Yamoussoukro" });
-  const [medecin] = useState({ nom: "Dr. Zongo" });
+  const [structure] = useState({ id: 1, nom: "" });
+  const [medecin] = useState({ nom: "" });
   const [patient] = useState({
     nom: "Marie Kouassi",
     age: 32,
@@ -19,9 +19,10 @@ export default function Teleconsultation() {
     { from: "medecin", text: "Bonjour, pouvez-vous me décrire vos symptômes ?", time: "09:00" }
   ]);
   const [input, setInput] = useState("");
-  const [notes, setNotes] = useState("");
   const [chrono, setChrono] = useState(0);
   const [showEnd, setShowEnd] = useState(false);
+  const [showFiles, setShowFiles] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const chronoRef = useRef();
 
   // Chronomètre
@@ -75,95 +76,129 @@ export default function Teleconsultation() {
       position: "sticky",
       top: 0,
       zIndex: 10,
+      justifyContent: "space-between"
     },
     main: {
-      display: "flex",
       flex: 1,
-      gap: "2rem",
-      padding: "2rem",
-      minHeight: 0,
-    },
-    videoZone: {
-      flex: 2,
-      minWidth: 0,
       display: "flex",
       flexDirection: "column",
-      position: "relative",
-      background: colors.blanc,
-      borderRadius: 18,
-      boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
-      overflow: "hidden",
-      minHeight: 420,
-      justifyContent: "center",
       alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      minHeight: 0,
+      padding: "2rem 0",
+    },
+    videoZone: {
+      width: "80vw",
+      maxWidth: 1100,
+      height: "60vh",
+      minHeight: 420,
+      background: colors.blanc,
+      borderRadius: 24,
+      boxShadow: "0 2px 24px rgba(46,125,255,0.10)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      marginBottom: "2rem",
     },
     patientVideo: {
       width: "100%",
-      height: 340,
+      height: "100%",
       background: colors.grisFonce,
-      borderRadius: 12,
+      borderRadius: 18,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "4rem",
+      fontSize: "6rem",
       color: colors.bleu,
       position: "relative",
     },
     medecinVideo: {
       position: "absolute",
-      bottom: 24,
-      right: 24,
-      width: 110,
-      height: 110,
+      bottom: 32,
+      right: 32,
+      width: 120,
+      height: 120,
       background: colors.gris,
       border: `3px solid ${colors.bleu}`,
       borderRadius: "50%",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "2.5rem",
+      fontSize: "2.8rem",
       color: colors.bleu,
       boxShadow: "0 2px 8px rgba(46,125,255,0.12)",
       zIndex: 2,
     },
     chrono: {
       position: "absolute",
-      top: 18,
-      right: 24,
+      top: 24,
+      right: 32,
       background: colors.vert,
       color: "#fff",
-      borderRadius: 8,
-      padding: "0.4rem 1.1rem",
+      borderRadius: 10,
+      padding: "0.5rem 1.3rem",
       fontWeight: 700,
-      fontSize: "1.1rem",
+      fontSize: "1.15rem",
       display: "flex",
       alignItems: "center",
       gap: 8,
       zIndex: 2,
     },
-    chatBloc: {
+    actionsBar: {
+      display: "flex",
+      gap: "2rem",
+      justifyContent: "center",
+      marginTop: "1.5rem",
+    },
+    actionBtn: {
+      background: colors.blanc,
+      color: colors.bleu,
+      border: `2px solid ${colors.bleu}`,
+      borderRadius: "1.2rem",
+      padding: "1rem 2.2rem",
+      fontWeight: 600,
+      fontSize: "1.15rem",
+      cursor: "pointer",
+      boxShadow: "0 2px 12px rgba(46,125,255,0.07)",
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      transition: "background 0.2s, color 0.2s",
+    },
+    modal: {
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.18)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 100,
+    },
+    modalContent: {
       background: colors.blanc,
       borderRadius: 18,
-      boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
-      padding: "1.2rem 1rem",
+      padding: "2rem",
+      minWidth: 340,
+      maxWidth: 400,
+      boxShadow: "0 2px 24px rgba(46,125,255,0.13)",
       display: "flex",
       flexDirection: "column",
-      gap: "1rem",
-      minWidth: 260,
-      maxWidth: 340,
-      flex: 1,
-      minHeight: 0,
-      height: "100%",
+      gap: "1.2rem",
+      alignItems: "center",
+      maxHeight: "80vh",
+      overflowY: "auto",
     },
     chatArea: {
-      flex: 1,
+      width: "100%",
+      maxHeight: 220,
       overflowY: "auto",
       display: "flex",
       flexDirection: "column",
       gap: "0.7rem",
       marginBottom: 8,
       minHeight: 80,
-      maxHeight: 220,
     },
     chatMsg: from => ({
       alignSelf: from === "medecin" ? "flex-start" : "flex-end",
@@ -189,6 +224,7 @@ export default function Teleconsultation() {
       gap: "0.5rem",
       alignItems: "center",
       marginTop: 4,
+      width: "100%",
     },
     chatInput: {
       flex: 1,
@@ -211,28 +247,6 @@ export default function Teleconsultation() {
       alignItems: "center",
       gap: 6,
     },
-    sidebar: {
-      width: 320,
-      minWidth: 220,
-      background: colors.blanc,
-      borderRadius: 18,
-      boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
-      padding: "2rem 1.2rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.2rem",
-      height: "100%",
-      minHeight: 0,
-    },
-    sectionTitle: {
-      fontWeight: 700,
-      color: colors.bleu,
-      fontSize: "1.1rem",
-      marginBottom: "0.5rem",
-      display: "flex",
-      alignItems: "center",
-      gap: "0.5rem",
-    },
     infoBloc: {
       background: colors.gris,
       borderRadius: 10,
@@ -240,54 +254,10 @@ export default function Teleconsultation() {
       fontSize: "1.02rem",
       color: "#222",
       marginBottom: 6,
-    },
-    notes: {
       width: "100%",
-      minHeight: 60,
-      borderRadius: 8,
-      border: `1px solid ${colors.grisFonce}`,
-      padding: 10,
-      fontSize: "1rem",
-      marginBottom: 8,
-      background: colors.gris,
     },
-    endBtn: {
-      background: colors.danger,
-      color: "#fff",
-      border: "none",
-      borderRadius: 8,
-      padding: "0.8rem 1.2rem",
-      fontWeight: 700,
-      fontSize: "1.08rem",
-      marginTop: 12,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      justifyContent: "center",
-    },
-    modal: {
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(0,0,0,0.18)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 100,
-    },
-    modalContent: {
-      background: colors.blanc,
-      borderRadius: 14,
-      padding: "2rem",
-      minWidth: 320,
-      maxWidth: 400,
-      boxShadow: "0 2px 16px rgba(46,125,255,0.13)",
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.2rem",
-      alignItems: "center",
-    },
-    modalBtn: {
+    closeBtn: {
+      marginTop: 16,
       background: colors.bleu,
       color: "#fff",
       border: "none",
@@ -296,7 +266,6 @@ export default function Teleconsultation() {
       fontWeight: 600,
       fontSize: "1.05rem",
       cursor: "pointer",
-      marginTop: 8,
       width: "100%",
       display: "flex",
       alignItems: "center",
@@ -309,11 +278,12 @@ export default function Teleconsultation() {
     <div style={styles.root}>
       {/* En-tête */}
       <div style={styles.header}>
-        <FaStethoscope />
-        Téléconsultation — <span style={{ color: "#222" }}>{medecin.nom}</span>, <span style={{ color: colors.vert }}>{structure.nom}</span>
+        <span>
+          <FaStethoscope /> Téléconsultation — <span style={{ color: "#222" }}>{medecin.nom}</span>, <span style={{ color: colors.vert }}>{structure.nom}</span>
+        </span>
       </div>
       <div style={styles.main}>
-        {/* Zone vidéo */}
+        {/* Zone vidéo en grand */}
         <div style={styles.videoZone}>
           <div style={styles.patientVideo}>
             <FaUserCircle />
@@ -327,60 +297,78 @@ export default function Teleconsultation() {
             </div>
           </div>
         </div>
-        {/* Chat + Bloc notes */}
-        <div style={styles.chatBloc}>
-          <div style={styles.sectionTitle}><FaNotesMedical /> Chat texte</div>
-          <div style={styles.chatArea}>
-            {chat.map((msg, idx) => (
-              <div key={idx} style={styles.chatMsg(msg.from)}>
-                {msg.text}
-                <div style={styles.chatTime}>{msg.time}</div>
-              </div>
-            ))}
-          </div>
-          <form style={styles.chatForm} onSubmit={handleSend}>
-            <input
-              style={styles.chatInput}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Votre message…"
-            />
-            <button type="submit" style={styles.chatBtn}><FaPaperPlane /> Envoyer</button>
-          </form>
-          <div>
-            <div style={styles.sectionTitle}><FaNotesMedical /> Notes du médecin</div>
-            <textarea
-              style={styles.notes}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Ajouter une note sur la consultation…"
-            />
-          </div>
-          <button style={styles.endBtn} onClick={() => setShowEnd(true)}>
-            <FaCheck /> Terminer la consultation
+        {/* Barre d'actions en bas */}
+        <div style={styles.actionsBar}>
+          <button style={styles.actionBtn} onClick={() => setShowChat(true)}>
+            <FaCommentDots /> Chat
+          </button>
+          <button style={styles.actionBtn} onClick={() => setShowFiles(true)}>
+            <FaFileMedical /> Dossier patient
+          </button>
+          <button style={styles.actionBtn} onClick={() => setShowEnd(true)}>
+            <FaCheck /> Terminer
           </button>
         </div>
-        {/* Sidebar dossier patient */}
-        <div style={styles.sidebar}>
-          <div style={styles.sectionTitle}><FaUserCircle /> Dossier patient</div>
-          <div style={styles.infoBloc}><b>{patient.nom}</b> — {patient.age} ans, {patient.sexe}</div>
-          <div style={styles.infoBloc}>Groupe sanguin : {patient.groupeSanguin}</div>
-          <div style={styles.infoBloc}><b>Symptômes :</b> {patient.symptomes}</div>
-          <div style={styles.infoBloc}><b>Antécédents :</b> {patient.antecedents}</div>
-          <div style={styles.infoBloc}><b>Diagnostic IA :</b> {patient.diagnosticIA} <span style={{ color: "#e53e3e", fontWeight: 600 }}>({patient.gravite})</span></div>
-        </div>
       </div>
-      {/* Modal de fin de consultation */}
+      {/* Modals dépliants */}
+      {showChat && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={{ fontWeight: 700, fontSize: "1.15rem", color: colors.bleu, marginBottom: 8 }}>
+              <FaCommentDots /> Chat avec le médecin
+            </div>
+            <div style={styles.chatArea}>
+              {chat.map((msg, idx) => (
+                <div key={idx} style={styles.chatMsg(msg.from)}>
+                  {msg.text}
+                  <div style={styles.chatTime}>{msg.time}</div>
+                </div>
+              ))}
+            </div>
+            <form style={styles.chatForm} onSubmit={handleSend}>
+              <input
+                style={styles.chatInput}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder="Votre message…"
+              />
+              <button type="submit" style={styles.chatBtn}><FaPaperPlane /> Envoyer</button>
+            </form>
+            <button style={styles.closeBtn} onClick={() => setShowChat(false)}>Fermer</button>
+          </div>
+        </div>
+      )}
+      {showFiles && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={{ fontWeight: 700, fontSize: "1.15rem", color: colors.bleu, marginBottom: 12 }}>
+              <FaFileMedical /> Mon dossier patient
+            </div>
+            <div style={styles.infoBloc}><b>Nom :</b> {patient.nom}</div>
+            <div style={styles.infoBloc}><b>Âge :</b> {patient.age} ans</div>
+            <div style={styles.infoBloc}><b>Sexe :</b> {patient.sexe}</div>
+            <div style={styles.infoBloc}><b>Groupe sanguin :</b> {patient.groupeSanguin}</div>
+            <div style={styles.infoBloc}><b>Symptômes :</b> {patient.symptomes}</div>
+            <div style={styles.infoBloc}><b>Antécédents :</b> {patient.antecedents}</div>
+            <div style={styles.infoBloc}><b>Diagnostic IA :</b> {patient.diagnosticIA} <span style={{ color: "#e53e3e", fontWeight: 600 }}>({patient.gravite})</span></div>
+            <button style={styles.closeBtn} onClick={() => setShowFiles(false)}>Fermer</button>
+          </div>
+        </div>
+      )}
       {showEnd && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
             <div style={{ fontWeight: 700, fontSize: "1.15rem", color: colors.bleu, marginBottom: 8 }}>
               Terminer la consultation
             </div>
-            <button style={styles.modalBtn}><FaFilePrescription /> Ajouter une ordonnance</button>
-            <button style={styles.modalBtn}><FaNotesMedical /> Envoyer un rapport</button>
-            <button style={{ ...styles.modalBtn, background: colors.danger }} onClick={() => setShowEnd(false)}>
+            <div style={{ color: "#444", marginBottom: 16, textAlign: "center" }}>
+              Voulez-vous vraiment terminer la téléconsultation ?
+            </div>
+            <button style={{ ...styles.closeBtn, background: colors.danger }} onClick={() => setShowEnd(false)}>
               Annuler
+            </button>
+            <button style={styles.closeBtn} onClick={() => {/* Ajoute ici la logique de fin d'appel */}}>
+              Confirmer
             </button>
           </div>
         </div>
