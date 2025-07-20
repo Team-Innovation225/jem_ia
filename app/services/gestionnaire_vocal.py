@@ -1,4 +1,3 @@
-# app/services/gestionnaire_vocal.py
 import logging
 import os
 from typing import Dict, Any, Optional
@@ -24,7 +23,7 @@ class GestionnaireVocal:
         logger.info("GestionnaireVocal initialized with SpeechRecognition and gTTS.")
         self.recognizer = sr.Recognizer()
 
-    async def transcrire_audio_en_texte(self, chemin_audio: str, language_code: str = "fr-FR") -> str:
+    async def transcrire_audio_en_texte(self, chemin_audio: str, language_code: str = "fr-FR") -> Optional[str]:
         """
         Transcribes an audio file to text using SpeechRecognition.
         Converts the input file to WAV if necessary.
@@ -34,61 +33,66 @@ class GestionnaireVocal:
             language_code (str): The BCP-47 language code (e.g., "fr-FR", "en-US").
 
         Returns:
-            str: The transcribed text.
+            Optional[str]: The transcribed text, or None if transcription failed.
         """
         if not os.path.exists(chemin_audio):
-            logger.error(f"Audio file not found for transcription: {chemin_audio}")
-            return "Désolé, je n'ai pas pu trouver le fichier audio."
+            logger.error(f"Fichier audio non trouvé pour la transcription: {chemin_audio}")
+            return None # Retourne None si le fichier n'existe pas
 
-        # Determine if conversion is needed
-        # Frontend likely sends .webm, SpeechRecognition expects .wav
+        # Détermine si une conversion est nécessaire
+        # Le frontend envoie probablement du .webm, SpeechRecognition attend du .wav
         _, file_extension = os.path.splitext(chemin_audio)
         temp_wav_path = None
         audio_to_process = chemin_audio
 
         if file_extension.lower() != '.wav':
-            logger.debug(f"Converting {chemin_audio} to WAV for SpeechRecognition.")
+            logger.debug(f"Conversion de {chemin_audio} en WAV pour SpeechRecognition.")
             try:
-                # Create a temporary path for the WAV file in UPLOAD_DIR
+                # Crée un chemin temporaire pour le fichier WAV dans UPLOAD_DIR
                 temp_wav_filename = f"{os.path.basename(chemin_audio).split('.')[0]}.wav"
                 temp_wav_path = os.path.join(parametres.UPLOAD_DIR, temp_wav_filename)
                 
                 audio = AudioSegment.from_file(chemin_audio)
                 audio.export(temp_wav_path, format="wav")
                 audio_to_process = temp_wav_path
-                logger.debug(f"File converted to WAV: {audio_to_process}")
+                logger.debug(f"Fichier converti en WAV: {audio_to_process}")
             except Exception as e:
-                logger.error(f"Error converting audio from {chemin_audio} to WAV: {e}", exc_info=True)
-                return "Désolé, une erreur est survenue lors de la préparation de votre message vocal."
+                logger.error(f"Erreur lors de la conversion audio de {chemin_audio} en WAV: {e}", exc_info=True)
+                return None # Retourne None en cas d'erreur de conversion
 
-        logger.debug(f"Starting audio transcription for: {audio_to_process} (Language: {language_code})")
+        logger.debug(f"Démarrage de la transcription audio pour: {audio_to_process} (Langue: {language_code})")
         try:
             with sr.AudioFile(audio_to_process) as source:
                 self.recognizer.adjust_for_ambient_noise(source)
                 audio_data = self.recognizer.record(source)
+            
+            # NOUVEAU LOG POUR DIAGNOSTIC
+            logger.debug(f"Audio data size for recognition: {len(audio_data.frame_data)} bytes")
 
+            # Tente de transcrire l'audio
             texte_transcrit = self.recognizer.recognize_google(audio_data, language=language_code)
+            logger.debug(f"Résultat brut de recognize_google: '{texte_transcrit}'") # NOUVEAU LOG
 
             if not texte_transcrit:
-                logger.warning(f"No text could be transcribed from: {audio_to_process}")
-                return "Désolé, je n'ai pas bien compris votre message vocal. Pourriez-vous répéter plus clairement ?"
+                logger.warning(f"Aucun texte n'a pu être transcrit à partir de: {audio_to_process}")
+                return "" # Retourne une chaîne vide si aucun texte n'a été transcrit
 
-            logger.info(f"Transcription completed. Text: '{texte_transcrit}'")
+            logger.info(f"Transcription terminée. Texte: '{texte_transcrit}'")
             return texte_transcrit
         except sr.UnknownValueError:
-            logger.warning(f"SpeechRecognition could not understand audio in: {audio_to_process}")
-            return "Désolé, je n'ai pas bien compris votre message vocal. Pourriez-vous répéter plus clairement ?"
+            logger.warning(f"SpeechRecognition n'a pas pu comprendre l'audio dans: {audio_to_process}")
+            return "" # Retourne une chaîne vide si la parole n'est pas comprise
         except sr.RequestError as e:
-            logger.error(f"Could not request results from SpeechRecognition (service unavailable or limit reached): {e}", exc_info=True)
-            return "Désolé, le service de reconnaissance vocale est momentanément indisponible. Veuillez réessayer."
+            logger.error(f"Impossible de demander des résultats à SpeechRecognition (service indisponible ou limite atteinte): {e}", exc_info=True)
+            return None # Retourne None en cas d'erreur de requête de service
         except Exception as e:
-            logger.error(f"Unexpected error during audio transcription: {e}", exc_info=True)
-            return "Désolé, une erreur est survenue lors de la transcription de votre message vocal."
+            logger.error(f"Erreur inattendue lors de la transcription audio: {e}", exc_info=True)
+            return None # Retourne None en cas d'erreurs inattendues
         finally:
-            # Clean up temporary WAV file if conversion occurred
+            # Nettoie le fichier WAV temporaire si une conversion a eu lieu
             if temp_wav_path and os.path.exists(temp_wav_path):
                 os.remove(temp_wav_path)
-                logger.debug(f"Temporary WAV file deleted: {temp_wav_path}")
+                logger.debug(f"Fichier WAV temporaire supprimé: {temp_wav_path}")
 
 
     async def generer_audio_depuis_texte(self, texte: str, chemin_sortie: str, language_code: str = "fr") -> str:
@@ -103,13 +107,13 @@ class GestionnaireVocal:
         Returns:
             str: The path to the generated audio file.
         """
-        logger.debug(f"Starting audio generation for text: '{texte[:50]}...' (Language: {language_code})")
+        logger.debug(f"Démarrage de la génération audio pour le texte: '{texte[:50]}...' (Langue: {language_code})")
         try:
             tts = gTTS(text=texte, lang=language_code, slow=False)
 
-            # Ensure output directory exists (using configured AUDIO_RESPONSES_DIR)
+            # S'assure que le répertoire de sortie existe (en utilisant AUDIO_RESPONSES_DIR configuré)
             repertoire_sortie = os.path.dirname(chemin_sortie)
-            if not repertoire_sortie: # If chemin_sortie is just a filename, default to AUDIO_RESPONSES_DIR
+            if not repertoire_sortie: # Si chemin_sortie est juste un nom de fichier, utilise AUDIO_RESPONSES_DIR par défaut
                 repertoire_sortie = parametres.AUDIO_RESPONSES_DIR
                 chemin_sortie = os.path.join(repertoire_sortie, chemin_sortie)
 
@@ -117,8 +121,8 @@ class GestionnaireVocal:
                 os.makedirs(repertoire_sortie)
 
             tts.save(chemin_sortie)
-            logger.info(f"Audio generation completed. Output file: {chemin_sortie}")
+            logger.info(f"Génération audio terminée. Fichier de sortie: {chemin_sortie}")
             return chemin_sortie
         except Exception as e:
-            logger.error(f"Error during audio generation with gTTS: {e}", exc_info=True)
+            logger.error(f"Erreur lors de la génération audio avec gTTS: {e}", exc_info=True)
             return ""

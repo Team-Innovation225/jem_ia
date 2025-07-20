@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from typing import Dict, Any, List, Optional
-from fastapi import HTTPException, status, UploadFile # Import UploadFile
+from fastapi import HTTPException, status, UploadFile
 
 # Importation des services nécessaires
 from app.services.integrateur_llm import IntegrateurLLM
@@ -36,33 +36,44 @@ class MoteurDiagnostic:
         transcription_utilisateur = None
         
         if audio_file_upload:
-            logger.info(f"Fichier audio reçu pour la session {id_session}. Lecture des bytes...")
+            logger.info(f"[{id_session}] Fichier audio reçu. Lecture des bytes...")
             audio_bytes = await audio_file_upload.read()
+            
             if not audio_bytes:
-                logger.error(f"[{id_session}] Le fichier audio fourni est vide.")
+                logger.error(f"[{id_session}] Le fichier audio fourni est vide après lecture.")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Le fichier audio fourni est vide.")
             
             # Sauvegarder dans un fichier temporaire pour la transcription
-            # Utilise un nom de fichier unique pour éviter les conflits
             temp_audio_filename = f"user_audio_{id_session}_{uuid.uuid4().hex}.webm"
             chemin_audio_utilisateur = os.path.join("uploads", temp_audio_filename)
             
             try:
                 with open(chemin_audio_utilisateur, "wb") as f:
                     f.write(audio_bytes)
-                logger.debug(f"Fichier audio utilisateur temporaire sauvegardé: {chemin_audio_utilisateur}")
+                logger.debug(f"[{id_session}] Fichier audio utilisateur temporaire sauvegardé: {chemin_audio_utilisateur}")
 
                 # Transcrire l'audio
-                transcription_utilisateur = await self.gestionnaire_vocal.transcrire_audio(chemin_audio_utilisateur)
-                logger.info(f"Transcription audio pour session {id_session}: '{transcription_utilisateur}'")
+                transcription_result = await self.gestionnaire_vocal.transcrire_audio_en_texte(chemin_audio_utilisateur)
+                
+                # NOUVEAU LOG POUR DIAGNOSTIC
+                logger.debug(f"[{id_session}] Résultat brut de la transcription: '{transcription_result}' (Type: {type(transcription_result)})")
+
+                if transcription_result:
+                    transcription_utilisateur = transcription_result
+                    logger.info(f"[{id_session}] Transcription audio réussie: '{transcription_utilisateur}'")
+                else:
+                    transcription_utilisateur = "" # Assurer que c'est une chaîne vide si la transcription échoue
+                    logger.warning(f"[{id_session}] La transcription audio n'a produit aucun texte pour : {chemin_audio_utilisateur}")
+                    # Ne pas lever d'erreur ici, laisser la vérification finale gérer le cas où tout est vide.
+
             except Exception as e:
-                logger.error(f"Erreur de transcription audio pour session {id_session}: {e}", exc_info=True)
+                logger.error(f"[{id_session}] Erreur lors de la transcription audio: {e}", exc_info=True)
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors de la transcription audio.")
             finally:
                 # Nettoyer le fichier audio temporaire après transcription
                 if os.path.exists(chemin_audio_utilisateur):
                     os.remove(chemin_audio_utilisateur)
-                    logger.debug(f"Fichier audio utilisateur temporaire supprimé après transcription: {chemin_audio_utilisateur}")
+                    logger.debug(f"[{id_session}] Fichier audio utilisateur temporaire supprimé après transcription: {chemin_audio_utilisateur}")
                     chemin_audio_utilisateur = None # Réinitialiser pour éviter de le passer par erreur plus tard
 
         # Déterminer le message final de l'utilisateur à envoyer au LLM
@@ -71,8 +82,10 @@ class MoteurDiagnostic:
 
         # Vérifier si une entrée valide a été fournie
         if not final_user_message or final_user_message.strip() == "":
-            logger.error(f"[{id_session}] Aucun message utilisateur ou transcription audio valide fourni.")
+            logger.error(f"[{id_session}] Aucun message utilisateur ou transcription audio valide fourni. (Message final vide/blanc)")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucun message utilisateur ou enregistrement vocal fourni. Veuillez fournir du texte ou un enregistrement vocal.")
+        
+        logger.debug(f"[{id_session}] Message utilisateur final pour traitement: '{final_user_message}'")
 
         # Log le message utilisateur
         user_log_id = await self.gestionnaire_contexte.enregistrer_log_conversation(
@@ -95,9 +108,9 @@ class MoteurDiagnostic:
                 temperature=0.7,
                 max_tokens=500
             )
-            logger.info(f"Réponse LLM reçue pour session {id_session}: '{llm_response_text}'")
+            logger.info(f"[{id_session}] Réponse LLM reçue: '{llm_response_text}'")
         except Exception as e:
-            logger.error(f"Erreur lors de la génération de la réponse LLM pour session {id_session}: {e}", exc_info=True)
+            logger.error(f"[{id_session}] Erreur lors de la génération de la réponse LLM: {e}", exc_info=True)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors de la génération de la réponse de l'IA.")
 
         # Synthétiser la réponse audio
@@ -106,9 +119,9 @@ class MoteurDiagnostic:
             audio_filename = f"ai_response_{id_session}_{uuid.uuid4().hex}.mp3"
             chemin_audio_reponse_ia = os.path.join("audio_reponses", audio_filename)
             await self.gestionnaire_vocal.synthetiser_texte_en_audio(llm_response_text, chemin_audio_reponse_ia)
-            logger.info(f"Réponse IA synthétisée en audio: {chemin_audio_reponse_ia}")
+            logger.info(f"[{id_session}] Réponse IA synthétisée en audio: {chemin_audio_reponse_ia}")
         except Exception as e:
-            logger.error(f"Erreur de synthèse vocale pour session {id_session}: {e}", exc_info=True)
+            logger.error(f"[{id_session}] Erreur de synthèse vocale: {e}", exc_info=True)
             # Ne pas lever d'exception ici si l'audio n'est pas critique, mais logguer.
             # L'application peut toujours renvoyer la réponse texte.
             chemin_audio_reponse_ia = None # Assurez-vous qu'il est None si la synthèse échoue.

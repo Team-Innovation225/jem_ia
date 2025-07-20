@@ -1,4 +1,3 @@
-# app/configuration/parametres.py
 import os
 import logging
 from pydantic import Field
@@ -19,7 +18,7 @@ class Parametres(BaseSettings):
     DB_HOST: str = Field("localhost", description="Hôte de la base de données MySQL.")
     DB_USER: str = Field("root", description="Nom d'utilisateur pour la base de données MySQL.")
     DB_PASSWORD: str = Field("", description="Mot de passe pour la base de données MySQL. Laissez vide si non requis.")
-    DB_NAME: str = Field("ia_medicale", description="Nom de la base de données MySQL.") # <-- CORRIGÉ ICI
+    DB_NAME: str = Field("ia_medicale", description="Nom de la base de données MySQL.")
     DB_PORT: int = Field(3306, description="Port de la base de données MySQL.")
     DB_POOL_SIZE: int = Field(10, description="Taille initiale du pool de connexions à la base de données.")
     DB_MAX_OVERFLOW: int = Field(20, description="Nombre maximal de connexions supplémentaires que le pool peut créer.")
@@ -32,7 +31,8 @@ class Parametres(BaseSettings):
     API_KEY_APP: str = Field(..., description="Clé API principale de l'application pour l'accès sécurisé à certains endpoints.")
 
     # --- Paramètres de Journalisation (Logging) ---
-    LOG_LEVEL: str = Field("INFO", description="Niveau de logging minimum (DEBUG, INFO, WARNING, ERROR, CRITICAL).")
+    # Pour le débogage, cette valeur DOIT être logging.DEBUG
+    LOG_LEVEL: int = Field(logging.DEBUG, description="Niveau de logging minimum (DEBUG, INFO, WARNING, ERROR, CRITICAL).") # <-- CORRECTION ICI
     LOG_FILE_PATH: str = Field("app.log", description="Chemin du fichier où les logs seront écrits.")
 
     # --- Répertoires de Fichiers ---
@@ -77,4 +77,3 @@ if __name__ == "__main__":
     print(f"Diagnostic Confidence Threshold: {parametres.DIAGNOSTIC_CONFIDENCE_THRESHOLD}")
     print(f"Conversation History Limit: {parametres.CONVERSATION_HISTORY_LIMIT}")
     print(f"Geolocation Search Radius (KM): {parametres.GEOLOCATION_SEARCH_RADIUS_KM}")
-

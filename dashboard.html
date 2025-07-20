@@ -883,11 +883,20 @@
 
 
             // Gérer l'envoi du formulaire (texte)
-            document.getElementById('chat-form').addEventListener('submit', async (e) => { // Using the form ID
-                e.preventDefault();
+            // Re-attaching event listeners directly to the button and input for simplicity
+            sendButton.addEventListener('click', async () => {
                 const userMessage = chatInput.value.trim();
                 await sendChatRequest(userMessage, null); // Send text message
             });
+
+            chatInput.addEventListener('keypress', async (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default form submission if input is inside a form
+                    const userMessage = chatInput.value.trim();
+                    await sendChatRequest(userMessage, null); // Send text message
+                }
+            });
+
 
             // Gérer l'enregistrement audio
             micButtonChat.addEventListener('click', async () => {
