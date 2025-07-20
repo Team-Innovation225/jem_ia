@@ -1,9 +1,8 @@
-# app/api/v1/points_terminaux.py
 import logging
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Security # <-- Ajout Security
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Security
 from fastapi.responses import FileResponse
-from fastapi.security import HTTPAuthorizationCredentials # <-- Ajout pour le type du token
+from fastapi.security import HTTPAuthorizationCredentials
 import os
 
 from app.base_de_donnees.modeles import (
@@ -16,12 +15,12 @@ from app.dependances.injection import (
     get_moteur_diagnostic,
     get_gestionnaire_connaissances,
     get_gestionnaire_authentification,
-    get_gestionnaire_contexte # <-- Ajout de cette injection pour l'historique de conversation
+    get_gestionnaire_contexte
 )
 from app.services.moteur_diagnostic import MoteurDiagnostic
 from app.services.gestionnaire_connaissances import GestionnaireConnaissances
-from app.services.gestionnaire_contexte import GestionnaireContexte # <-- Import pour le typage
-from app.services.gestionnaire_authentification import GestionnaireAuthentification, oauth2_scheme # <-- Import de oauth2_scheme
+from app.services.gestionnaire_contexte import GestionnaireContexte
+from app.services.gestionnaire_authentification import GestionnaireAuthentification, oauth2_scheme
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -29,11 +28,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # --- Dépendances pour l'authentification ---
-# Nous utilisons directement la dépendance définie dans GestionnaireAuthentification
-# C'est plus propre et évite la duplication de logique.
-# La fonction get_current_active_user dans GestionnaireAuthentification est déjà une dépendance FastAPI
-# qui prend le token via Security(oauth2_scheme) et retourne UserEnDB.
-# Donc, nous pouvons simplement la référencer ici.
 async def get_current_active_user_for_endpoints(
     current_user: UserEnDB = Depends(GestionnaireAuthentification.get_current_active_user)
 ) -> UserEnDB:
@@ -52,7 +46,7 @@ async def chat_with_ai(
     message_utilisateur: Optional[str] = None,
     audio_file: Optional[UploadFile] = File(None),
     moteur_diagnostic: MoteurDiagnostic = Depends(get_moteur_diagnostic),
-    current_user: UserEnDB = Depends(get_current_active_user_for_endpoints) # Assurez-vous que l'utilisateur est authentifié
+    current_user: UserEnDB = Depends(get_current_active_user_for_endpoints)
 ):
     """
     Permet d'engager une conversation avec l'IA.
@@ -65,7 +59,6 @@ async def chat_with_ai(
     if audio_file:
         # Sauvegarder le fichier audio temporairement
         try:
-            # Assurez-vous que le répertoire 'uploads' existe
             upload_dir = "uploads"
             os.makedirs(upload_dir, exist_ok=True)
             chemin_audio = os.path.join(upload_dir, audio_file.filename)
@@ -110,10 +103,10 @@ async def get_audio_response(filename: str):
     logger.info(f"Fichier audio de réponse demandé: {file_path}")
     return FileResponse(path=file_path, media_type="audio/mpeg", filename=filename)
 
-@router.get("/conversation_history/{id_session}", response_model=List[LogConversationEnDB], summary="Obtenir l'historique d'une session de conversation") # <-- CORRIGÉ LogConversationEnDB
+@router.get("/conversation_history/{id_session}", response_model=List[LogConversationEnDB], summary="Obtenir l'historique d'une session de conversation")
 async def get_conversation_history(
     id_session: str,
-    gestionnaire_contexte: GestionnaireContexte = Depends(get_gestionnaire_contexte), # <-- INJECTÉ CORRECTEMENT
+    gestionnaire_contexte: GestionnaireContexte = Depends(get_gestionnaire_contexte),
     current_user: UserEnDB = Depends(get_current_active_user_for_endpoints)
 ):
     """
@@ -124,8 +117,7 @@ async def get_conversation_history(
         history = await gestionnaire_contexte.lire_logs_conversation_par_session(id_session)
         if not history:
             logger.warning(f"Aucun historique trouvé pour la session {id_session}.")
-            # Ne pas lever 404 si l'historique est vide, juste retourner une liste vide
-            return [] # Retourne une liste vide au lieu de 404 si aucun log n'est trouvé
+            return []
         
         logger.info(f"Historique de conversation pour la session {id_session} récupéré avec {len(history)} entrées.")
         return history
@@ -142,13 +134,12 @@ async def get_conversation_history(
 async def add_maladie(
     maladie: MaladieCreer,
     gestionnaire_connaissances: GestionnaireConnaissances = Depends(get_gestionnaire_connaissances),
-    current_user: UserEnDB = Depends(get_current_active_user_for_endpoints) # Restreindre l'accès aux admins ou médecins
+    current_user: UserEnDB = Depends(get_current_active_user_for_endpoints)
 ):
     """
     Ajoute une nouvelle maladie à la base de connaissances médicale.
     Requiert une authentification.
     """
-    # Exemple de vérification de rôle (ajuster selon vos besoins)
     if current_user.role not in ["admin", "medecin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès non autorisé.")
 

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord - Télémédecine IA</title>
+    <!-- Utilisation de Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style pour le scrollbar dans le chat */
+        #chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar de navigation -->
+        <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
+            <div class="h-16 flex items-center justify-center border-b border-gray-200">
+                <h1 class="text-xl font-bold text-blue-600">Télémédecine IA</h1>
+            </div>
+            <nav class="flex-1 px-4 py-4 space-y-2">
+                <a href="#" id="nav-diagnostic" class="flex items-center px-4 py-2 text-gray-700 bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    Diagnostic IA
+                </a>
+                <a href="#" id="nav-knowledge" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-9-5.747h18" /></svg>
+                    Base de Connaissances
+                </a>
+                 <a href="/api/docs" target="_blank" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    API Docs
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Contenu principal -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            
+            <!-- SECTION: Diagnostic IA -->
+            <div id="content-diagnostic">
+                <h2 class="text-2xl font-bold mb-4">Assistant de Diagnostic IA</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Colonne de Chat -->
+                    <div class="lg:col-span-2 bg-white p-4 rounded-lg shadow">
+                        <div id="chat-container" class="flex flex-col h-[75vh]">
+                            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-gray-50 rounded-t-lg">
+                                <!-- Les messages du chat apparaîtront ici -->
+                                <div class="text-center text-gray-500">Démarrez la conversation en posant une question.</div>
+                            </div>
+                            <div class="p-4 bg-white border-t border-gray-200 rounded-b-lg">
+                                <form id="chat-form" class="flex items-center space-x-4">
+                                    <input type="text" id="chat-input-text" placeholder="Entrez votre message ou décrivez vos symptômes..." class="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="chat-input-audio" class="cursor-pointer">
+                                        <svg class="h-6 w-6 text-gray-600 hover:text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                    </label>
+                                    <input type="file" id="chat-input-audio" accept="audio/*" class="hidden">
+                                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Envoyer</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Colonne d'historique -->
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2">Historique de Session</h3>
+                        <div class="flex items-center mb-4">
+                             <input type="text" id="history-session-id" placeholder="ID de session" class="flex-1 p-2 border border-gray-300 rounded-md">
+                             <button id="history-fetch-btn" class="ml-2 bg-gray-200 p-2 rounded-md hover:bg-gray-300">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 20v-5h-5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8h.5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12a8 8 0 01-8 8h-.5" /></svg>
+                             </button>
+                        </div>
+                        <div id="conversation-history-list" class="space-y-2 text-sm text-gray-600 overflow-y-auto h-[60vh]">
+                            <!-- L'historique sera chargé ici -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Base de Connaissances -->
+            <div id="content-knowledge" class="hidden">
+                <h2 class="text-2xl font-bold mb-4">Gestion de la Base de Connaissances</h2>
+                 <div class="p-4 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50" role="alert">
+                  <span class="font-medium">Accès restreint:</span> La modification de ces données est réservée aux utilisateurs avec le rôle 'admin' ou 'medecin'.
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Gestion des Maladies -->
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <h3 class="text-lg font-bold">Gérer les Maladies</h3>
+                        <!-- Ajouter une maladie -->
+                        <form id="form-add-maladie">
+                            <h4 class="font-semibold">Ajouter une maladie</h4>
+                            <input type="text" name="nom_fr" placeholder="Nom (FR)" class="w-full p-2 mt-1 border rounded" required>
+                            <textarea name="description_fr" placeholder="Description (FR)" class="w-full p-2 mt-2 border rounded" required></textarea>
+                            <button type="submit" class="w-full mt-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Ajouter</button>
+                        </form>
+                        <hr>
+                        <!-- Rechercher/Mettre à jour une maladie -->
+                        <form id="form-update-maladie">
+                             <h4 class="font-semibold">Rechercher / Mettre à jour</h4>
+                             <input type="text" name="search_nom" placeholder="Rechercher par nom..." class="w-full p-2 mt-1 border rounded">
+                             <input type="number" name="maladie_id" placeholder="ID de la maladie à màj" class="w-full p-2 mt-2 border rounded">
+                             <textarea name="description_fr_update" placeholder="Nouvelle description" class="w-full p-2 mt-2 border rounded"></textarea>
+                             <button type="submit" class="w-full mt-2 bg-green-600 text-white p-2 rounded hover:bg-green-700">Mettre à Jour</button>
+                        </form>
+                    </div>
+
+                    <!-- Gestion des Symptômes -->
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <h3 class="text-lg font-bold">Gérer les Symptômes</h3>
+                        <!-- Ajouter un symptôme -->
+                        <form id="form-add-symptome">
+                            <h4 class="font-semibold">Ajouter un symptôme</h4>
+                            <input type="text" name="nom_fr" placeholder="Nom (FR)" class="w-full p-2 mt-1 border rounded" required>
+                            <textarea name="description_fr" placeholder="Description (FR)" class="w-full p-2 mt-2 border rounded" required></textarea>
+                            <button type="submit" class="w-full mt-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Ajouter</button>
+                        </form>
+                        <hr>
+                        <!-- Mettre à jour un symptôme -->
+                        <form id="form-update-symptome">
+                             <h4 class="font-semibold">Mettre à jour un symptôme</h4>
+                             <input type="number" name="symptome_id" placeholder="ID du symptôme à màj" class="w-full p-2 mt-1 border rounded" required>
+                             <textarea name="description_fr_update" placeholder="Nouvelle description" class="w-full p-2 mt-2 border rounded"></textarea>
+                             <button type="submit" class="w-full mt-2 bg-green-600 text-white p-2 rounded hover:bg-green-700">Mettre à Jour</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Lier Maladie et Symptôme -->
+                <div class="bg-white p-6 rounded-lg shadow mt-6">
+                    <h3 class="text-lg font-bold">Lier Maladie et Symptôme</h3>
+                    <form id="form-link-maladie-symptome" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <input type="number" name="maladie_id" placeholder="ID Maladie" class="w-full p-2 border rounded" required>
+                        <input type="number" name="symptome_id" placeholder="ID Symptôme" class="w-full p-2 border rounded" required>
+                        <input type="number" step="0.1" name="force_lien" placeholder="Force du lien (ex: 0.8)" class="w-full p-2 border rounded" required>
+                        <button type="submit" class="md:col-span-3 w-full mt-2 bg-purple-600 text-white p-2 rounded hover:bg-purple-700">Créer le Lien</button>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- GESTION DE LA NAVIGATION ---
+            const navDiagnostic = document.getElementById('nav-diagnostic');
+            const navKnowledge = document.getElementById('nav-knowledge');
+            const contentDiagnostic = document.getElementById('content-diagnostic');
+            const contentKnowledge = document.getElementById('content-knowledge');
+
+            function showDiagnostic() {
+                contentDiagnostic.classList.remove('hidden');
+                contentKnowledge.classList.add('hidden');
+                navDiagnostic.classList.add('bg-gray-200');
+                navKnowledge.classList.remove('bg-gray-200');
+            }
+
+            function showKnowledge() {
+                contentDiagnostic.classList.add('hidden');
+                contentKnowledge.classList.remove('hidden');
+                navDiagnostic.classList.remove('bg-gray-200');
+                navKnowledge.classList.add('bg-gray-200');
+            }
+
+            navDiagnostic.addEventListener('click', (e) => {
+                e.preventDefault();
+                showDiagnostic();
+            });
+
+            navKnowledge.addEventListener('click', (e) => {
+                e.preventDefault();
+                showKnowledge();
+            });
+            
+            // --- LOGIQUE API (À IMPLÉMENTER) ---
+            
+            const API_BASE_URL = '/api/v1/core';
+            // NOTE: Vous devrez gérer l'authentification (Firebase ID Token) et l'inclure
+            // dans les headers de chaque requête, par exemple:
+            // headers: { 'Authorization': `Bearer ${firebaseToken}` }
+
+            // 1. CHAT & DIAGNOSTIC
+            const chatForm = document.getElementById('chat-form');
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // TODO:
+                // 1. Récupérer le texte et/ou le fichier audio.
+                // 2. Créer un objet FormData.
+                // 3. Ajouter le message_utilisateur et/ou audio_file au FormData.
+                // 4. Générer un ID de session si ce n'est pas déjà fait.
+                // 5. Appeler `POST /chat/` avec le FormData.
+                // 6. Afficher la réponse de l'IA dans la fenêtre de chat.
+                // 7. Si la réponse contient un `audio_url`, créer un lecteur audio.
+                console.log('Formulaire de chat soumis. Logique à implémenter.');
+            });
+
+            // 2. HISTORIQUE DE CONVERSATION
+            const historyBtn = document.getElementById('history-fetch-btn');
+            historyBtn.addEventListener('click', async () => {
+                const sessionId = document.getElementById('history-session-id').value;
+                if (!sessionId) {
+                    alert('Veuillez entrer un ID de session.');
+                    return;
+                }
+                // TODO:
+                // 1. Appeler `GET /conversation_history/{id_session}`.
+                // 2. Afficher la liste des messages dans `#conversation-history-list`.
+                console.log(`Récupération de l'historique pour la session ${sessionId}. Logique à implémenter.`);
+            });
+            
+            // 3. GESTION DES CONNAISSANCES
+            // Chaque formulaire ci-dessous doit avoir un event listener 'submit'.
+            
+            // Ajouter une maladie
+            document.getElementById('form-add-maladie').addEventListener('submit', e => {
+                e.preventDefault();
+                // TODO: Appeler `POST /knowledge/maladies/` avec les données du formulaire.
+                console.log('Ajout de maladie. Logique à implémenter.');
+            });
+            
+            // Mettre à jour une maladie
+            document.getElementById('form-update-maladie').addEventListener('submit', e => {
+                e.preventDefault();
+                // TODO: 
+                // - Si le champ de recherche est rempli, appeler `GET /knowledge/maladies/{nom_maladie}`.
+                // - Si les champs de mise à jour sont remplis, appeler `PUT /knowledge/maladies/{maladie_id}`.
+                console.log('Mise à jour de maladie. Logique à implémenter.');
+            });
+
+            // Ajouter un symptôme
+            document.getElementById('form-add-symptome').addEventListener('submit', e => {
+                e.preventDefault();
+                // TODO: Appeler `POST /knowledge/symptomes/` avec les données du formulaire.
+                console.log('Ajout de symptôme. Logique à implémenter.');
+            });
+
+            // Mettre à jour un symptôme
+            document.getElementById('form-update-symptome').addEventListener('submit', e => {
+                e.preventDefault();
+                // TODO: Appeler `PUT /knowledge/symptomes/{symptome_id}`.
+                console.log('Mise à jour de symptôme. Logique à implémenter.');
+            });
+
+            // Lier maladie et symptôme
+            document.getElementById('form-link-maladie-symptome').addEventListener('submit', e => {
+                e.preventDefault();
+                // TODO: Appeler `POST /knowledge/maladie-symptome-liens/`.
+                console.log('Liaison maladie-symptôme. Logique à implémenter.');
+            });
+        });
+    </script>
+</body>
+</html>

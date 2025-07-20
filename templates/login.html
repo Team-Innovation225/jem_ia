@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion / Inscription - Télémédecine IA</title>
+    <!-- Utilisation de Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <div class="mx-auto mb-6 h-16 w-16 flex items-center justify-center bg-blue-100 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                </svg>
+            </div>
+            
+            <!-- Conteneur pour les messages d'erreur/succès globaux -->
+            <div id="global-message" class="text-sm text-center py-2 px-4 rounded-md mb-4 hidden"></div>
+
+            <!-- Formulaire de Connexion -->
+            <div id="login-section">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Connexion</h2>
+                <p class="text-center text-gray-600 mb-8">Connectez-vous pour accéder à votre tableau de bord Télémédecine IA.</p>
+
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700">Adresse Email</label>
+                        <input type="email" id="login-email" name="email" required 
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="votre.email@exemple.com">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                        <input type="password" id="login-password" name="password" required 
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="********">
+                    </div>
+                    <div>
+                        <button type="submit" 
+                                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Se connecter
+                        </button>
+                    </div>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-gray-600">
+                    Pas encore de compte ? <a href="#" id="show-register-link" class="font-medium text-blue-600 hover:text-blue-500">Inscrivez-vous ici</a>.
+                </p>
+            </div>
+
+            <!-- Formulaire d'Inscription (initiallement masqué) -->
+            <div id="register-section" class="hidden">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Inscription</h2>
+                <p class="text-center text-gray-600 mb-8">Créez votre compte pour commencer à utiliser la plateforme.</p>
+
+                <form id="register-form" class="space-y-6">
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-gray-700">Adresse Email</label>
+                        <input type="email" id="register-email" name="email" required 
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="votre.email@exemple.com">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                        <input type="password" id="register-password" name="password" required 
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="********">
+                    </div>
+                    <div>
+                        <label for="register-confirm-password" class="block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
+                        <input type="password" id="register-confirm-password" name="confirm_password" required 
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="********">
+                    </div>
+                    <div>
+                        <button type="submit" 
+                                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            S'inscrire
+                        </button>
+                    </div>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-gray-600">
+                    Déjà un compte ? <a href="#" id="show-login-link" class="font-medium text-blue-600 hover:text-blue-500">Connectez-vous ici</a>.
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Pied de page -->
+        <footer class="absolute bottom-4 text-center text-gray-500 text-sm">
+            <p>&copy; 2025 - Team Innovation.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginSection = document.getElementById('login-section');
+            const registerSection = document.getElementById('register-section');
+            const showRegisterLink = document.getElementById('show-register-link');
+            const showLoginLink = document.getElementById('show-login-link');
+            const globalMessageDiv = document.getElementById('global-message');
+
+            const loginForm = document.getElementById('login-form');
+            const loginEmailInput = document.getElementById('login-email');
+            const loginPasswordInput = document.getElementById('login-password');
+            const API_LOGIN_URL = '/api/v1/auth/login';
+
+            const registerForm = document.getElementById('register-form');
+            const registerEmailInput = document.getElementById('register-email');
+            const registerPasswordInput = document.getElementById('register-password');
+            const registerConfirmPasswordInput = document.getElementById('register-confirm-password');
+            const API_REGISTER_URL = '/api/v1/auth/register'; // Assurez-vous que cet endpoint existe
+
+            // Fonction pour afficher un message global (succès ou erreur)
+            function showGlobalMessage(message, type = 'error') {
+                globalMessageDiv.textContent = message;
+                globalMessageDiv.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+                if (type === 'error') {
+                    globalMessageDiv.classList.add('bg-red-100', 'text-red-800');
+                } else {
+                    globalMessageDiv.classList.add('bg-green-100', 'text-green-800');
+                }
+            }
+
+            // Basculer entre les formulaires
+            showRegisterLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginSection.classList.add('hidden');
+                registerSection.classList.remove('hidden');
+                globalMessageDiv.classList.add('hidden'); // Cache le message global lors du changement
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerSection.classList.add('hidden');
+                loginSection.classList.remove('hidden');
+                globalMessageDiv.classList.add('hidden'); // Cache le message global lors du changement
+            });
+
+            // Gérer la soumission du formulaire de connexion
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = loginEmailInput.value;
+                const password = loginPasswordInput.value;
+
+                globalMessageDiv.classList.add('hidden'); 
+
+                try {
+                    const response = await fetch(API_LOGIN_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, password: password }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        localStorage.setItem('firebase_id_token', data.access_token);
+                        console.log('Connexion réussie ! Token:', data.access_token);
+                        window.location.href = '/dashboard'; 
+                    } else {
+                        const detail = data.detail || 'Erreur de connexion. Veuillez vérifier vos identifiants.';
+                        showGlobalMessage(detail, 'error');
+                        console.error('Erreur de connexion:', detail);
+                    }
+                } catch (error) {
+                    console.error('Erreur réseau ou inattendue:', error);
+                    showGlobalMessage('Une erreur est survenue. Veuillez réessayer.', 'error');
+                }
+            });
+
+            // Gérer la soumission du formulaire d'inscription
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = registerEmailInput.value;
+                const password = registerPasswordInput.value;
+                const confirmPassword = registerConfirmPasswordInput.value;
+
+                globalMessageDiv.classList.add('hidden'); 
+
+                if (password !== confirmPassword) {
+                    showGlobalMessage('Les mots de passe ne correspondent pas.', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(API_REGISTER_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, password: password }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showGlobalMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.', 'success');
+                        registerForm.reset(); // Réinitialise le formulaire
+                        loginSection.classList.remove('hidden'); // Affiche le formulaire de connexion
+                        registerSection.classList.add('hidden');
+                    } else {
+                        const detail = data.detail || 'Erreur lors de l\'inscription.';
+                        showGlobalMessage(detail, 'error');
+                        console.error('Erreur d\'inscription:', detail);
+                    }
+                } catch (error) {
+                    console.error('Erreur réseau ou inattendue:', error);
+                    showGlobalMessage('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

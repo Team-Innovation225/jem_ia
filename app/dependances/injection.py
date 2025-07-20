@@ -316,4 +316,3 @@ def get_moteur_diagnostic() -> MoteurDiagnostic:
     if _moteur_diagnostic_instance is None:
         raise Exception("MoteurDiagnostic n'est pas initialisé.")
     return _moteur_diagnostic_instance
-
