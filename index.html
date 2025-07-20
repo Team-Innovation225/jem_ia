@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient - Connexion, Inscription & Chat IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <style>
+        body { font-family: "Inter", sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background-color: #fff; padding: 2.5rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); text-align: center; max-width: 500px; width: 95%; }
+        .form-group { margin-bottom: 1rem; text-align: left; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #4a5568; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; box-sizing: border-box; }
+        .button-primary { background-color: #4285F4; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease; width: 100%; margin-top: 1rem; }
+        .button-primary:hover { background-color: #357ae8; }
+        .message-box { background-color: #e0f2f7; border: 1px solid #b3e5fc; color: #01579b; padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem; text-align: left; word-break: break-all; max-height: 200px; overflow-y: auto; }
+        .error-message { background-color: #ffebee; border: 1px solid #ef9a9a; color: #c62828; padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem; text-align: left; }
+        .chat-section { display: none; margin-top: 2rem; }
+        .chat-messages { background: #e9ecef; border-radius: 10px; padding: 1rem; min-height: 200px; max-height: 300px; overflow-y: auto; margin-bottom: 1rem; }
+        .message-bubble { max-width: 70%; padding: 10px 15px; border-radius: 15px; word-wrap: break-word; margin-bottom: 8px; }
+        .user-message { align-self: flex-end; background-color: #dcf8c6; color: #333; }
+        .ai-message { align-self: flex-start; background-color: #fff; color: #333; }
+        .chat-input-container { display: flex; gap: 10px; }
+        .chat-input { flex-grow: 1; padding: 10px 15px; border: 1px solid #ced4da; border-radius: 20px; font-size: 1rem; outline: none; }
+        .send-button { background-color: #4a90e2; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-size: 1rem; transition: background-color 0.3s ease; }
+        .send-button:hover { background-color: #357ABD; }
+        .logout-btn { background-color: #e2e8f0; color: #2d3748; border-radius: 0.5rem; padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
+        .logout-btn:hover { background-color: #cbd5e0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="auth-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Patient - Connexion & Inscription</h2>
+            <form id="registerForm" class="mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Inscription Patient</h3>
+                <div class="form-group">
+                    <label for="registerEmail">Email:</label>
+                    <input type="email" id="registerEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Mot de passe:</label>
+                    <input type="password" id="registerPassword" name="password" required>
+                </div>
+                <button type="submit" class="button-primary">S'inscrire</button>
+            </form>
+            <form id="loginForm">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Connexion Patient</h3>
+                <div class="form-group">
+                    <label for="loginEmail">Email:</label>
+                    <input type="email" id="loginEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Mot de passe:</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                <button type="submit" class="button-primary">Se connecter</button>
+            </form>
+            <div id="responseMessage" class="message-box hidden"></div>
+            <div id="errorMessage" class="error-message hidden"></div>
+        </div>
+        <div id="chat-section" class="chat-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Chat IA Patient</h2>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Écrivez votre message...">
+                <button id="sendButton" class="send-button">Envoyer</button>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+        </div>
+    </div>
+    <script>
+const firebaseConfig = {
+    apiKey: "AIzaSyA1AKqZs8lkFkbX2vMxYX4ytwocrw3hNHs",
+    appId: "1:103280040214:web:89256070716da5b55a1837",
+    projectId: "santeai-b8e44"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const chatSection = document.getElementById('chat-section');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendButton = document.getElementById('sendButton');
+
+function showAuthRequired() {
+    chatSection.innerHTML = '<div class="text-red-600 font-bold">Veuillez vous connecter pour accéder au chat IA.</div>';
+}
+
+sendButton.addEventListener('click', async function() {
+    const user = auth.currentUser;
+    if (!user) {
+        showAuthRequired();
+        return;
+    }
+    const idToken = await user.getIdToken();
+    const message = chatInput.value.trim();
+    if (!message) return;
+    addMessage(message, 'user');
+    chatInput.value = '';
+    try {
+        const response = await fetch('http://localhost:8000/api/v1/patients/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            addMessage(data.reponse, 'ai');
+        } else {
+            addMessage('Erreur IA: ' + (data.detail || 'Réponse invalide'), 'ai');
+        }
+    } catch (error) {
+        addMessage('Erreur réseau ou serveur.', 'ai');
+    }
+});
+function addMessage(message, sender) {
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble ' + (sender === 'user' ? 'user-message' : 'ai-message');
+    bubble.textContent = message;
+    chatMessages.appendChild(bubble);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+// Vérification d'authentification au chargement
+window.onload = function() {
+    auth.onAuthStateChanged(user => {
+        if (!user) showAuthRequired();
+    });
+};
+    </script>
+</body>
+</html>

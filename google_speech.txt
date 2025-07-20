@@ -1,0 +1,178 @@
+import logging
+from typing import Dict, Any, Optional
+import os
+from google.cloud import speech_v1p1beta1 as speech
+from google.cloud import texttospeech_v1beta1 as texttospeech
+from google.oauth2 import service_account
+
+# Configurer le logger
+logger = logging.getLogger(__name__)
+
+class GestionnaireVocal:
+    """
+    Gère les fonctionnalités de reconnaissance vocale (Speech-to-Text)
+    et de synthèse vocale (Text-to-Speech) en utilisant les APIs Google Cloud.
+    """
+
+    def __init__(self):
+        logger.info("GestionnaireVocal initialisé.")
+
+        credentials = None
+        # Récupérer le chemin relatif de la clé de service depuis les variables d'environnement
+        #relative_key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        relative_key_path = "cle.json"  # Chemin relatif par défaut pour la clé de service
+
+
+        if relative_key_path:
+            # Construire le chemin absolu vers la racine du projet
+            # os.path.dirname(__file__) est le répertoire de gestionnaire_vocal.py (app/services)
+            # '..' remonte d'un niveau (à 'app')
+            # '..' remonte encore d'un niveau (à la racine du projet)
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            absolute_key_path = os.path.join(project_root, relative_key_path)
+
+            # Vérifier si le fichier de clé existe au chemin absolu
+            if os.path.exists(absolute_key_path):
+                try:
+                    # Charger les identifiants à partir du fichier de clé de service
+                    credentials = service_account.Credentials.from_service_account_file(absolute_key_path)
+                    logger.info(f"Identifiants Google Cloud chargés depuis le chemin absolu : {absolute_key_path}")
+                except Exception as e:
+                    logger.error(f"Erreur lors du chargement explicite des identifiants depuis {absolute_key_path}: {e}", exc_info=True)
+                    credentials = None # Assurez-vous que credentials est None en cas d'échec
+            else:
+                logger.warning(f"Le fichier de clé de service spécifié dans GOOGLE_APPLICATION_CREDENTIALS_PATH n'existe pas à : {absolute_key_path}")
+        # Si GOOGLE_APPLICATION_CREDENTIALS_PATH n'est pas défini, vérifier GOOGLE_APPLICATION_CREDENTIALS
+        elif os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            logger.info("GOOGLE_APPLICATION_CREDENTIALS est défini. Les clients s'authentifieront automatiquement.")
+        else:
+            logger.warning("Ni GOOGLE_APPLICATION_CREDENTIALS, ni GOOGLE_APPLICATION_CREDENTIALS_PATH n'est défini. L'authentification pourrait échouer.")
+
+
+        try:
+            if credentials:
+                # Initialiser les clients avec les identifiants chargés explicitement
+                self.stt_client = speech.SpeechClient(credentials=credentials)
+                self.tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+                logger.info("Clients Google Cloud STT/TTS initialisés avec identifiants explicites.")
+            else:
+                # Tenter d'initialiser les clients sans identifiants explicites.
+                # Ils chercheront alors les identifiants par défaut de l'application (ADC).
+                self.stt_client = speech.SpeechClient()
+                self.tts_client = texttospeech.TextToSpeechClient()
+                logger.info("Clients Google Cloud STT/TTS initialisés avec les identifiants par défaut de l'environnement.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation des clients Google Cloud : {e}. "
+                        "Vérifiez votre configuration d'authentification.", exc_info=True)
+            self.stt_client = None
+            self.tts_client = None
+            # Lever une erreur critique pour empêcher l'application de démarrer sans services vocaux
+            raise RuntimeError("Impossible d'initialiser les clients Google Cloud STT/TTS. Vérifiez votre configuration d'authentification.")
+
+    async def transcrire_audio_en_texte(self, chemin_audio: str, sample_rate_hertz: int = 16000, language_code: str = "fr-FR") -> str:
+        """
+        Transcrit un fichier audio en texte en utilisant Google Cloud Speech-to-Text.
+
+        Args:
+            chemin_audio (str): Le chemin d'accès au fichier audio à transcrire.
+            sample_rate_hertz (int): Le taux d'échantillonnage de l'audio en Hertz (ex: 16000, 44100).
+                                     Doit correspondre à l'audio source.
+            language_code (str): Le code de langue BCP-47 (ex: "fr-FR", "en-US").
+
+        Returns:
+            str: Le texte transcrit.
+        """
+        if not self.stt_client:
+            logger.error("Le client STT n'est pas initialisé.")
+            return "Désolé, le service de reconnaissance vocale n'est pas disponible."
+
+        if not os.path.exists(chemin_audio):
+            logger.error(f"Fichier audio non trouvé pour la transcription : {chemin_audio}")
+            return "Désolé, je n'ai pas pu trouver le fichier audio."
+
+        logger.debug(f"Début de la transcription audio pour : {chemin_audio} (Langue: {language_code}, Taux d'échantillonnage: {sample_rate_hertz} Hz)")
+        try:
+            with open(chemin_audio, "rb") as audio_file:
+                content = audio_file.read()
+
+            audio = speech.RecognitionAudio(content=content)
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16, # Ou FLAC, MP3, etc., selon votre audio
+                sample_rate_hertz=sample_rate_hertz,
+                language_code=language_code,
+                enable_automatic_punctuation=True,
+                # Ajouter des "speech contexts" si vous avez des termes médicaux spécifiques
+                # speech_contexts=[{"phrases": ["maladie de Crohn", "syndrome du côlon irritable"]}]
+            )
+
+            # Envoi de la requête à l'API Speech-to-Text
+            response = self.stt_client.recognize(config=config, audio=audio)
+
+            texte_transcrit = ""
+            for result in response.results:
+                # Le premier alternative est généralement le plus précis
+                texte_transcrit += result.alternatives[0].transcript
+
+            if not texte_transcrit:
+                logger.warning(f"Aucun texte n'a pu être transcrit à partir de : {chemin_audio}")
+                return "Désolé, je n'ai pas bien compris votre message vocal. Pourriez-vous répéter plus clairement ?"
+
+            logger.info(f"Transcription terminée. Texte: '{texte_transcrit}'")
+            return texte_transcrit
+        except Exception as e:
+            logger.error(f"Erreur lors de la transcription audio avec Google Cloud Speech-to-Text : {e}", exc_info=True)
+            return "Désolé, une erreur est survenue lors de la transcription de votre message vocal. Veuillez réessayer."
+
+    async def generer_audio_depuis_texte(self, texte: str, chemin_sortie: str, language_code: str = "fr-FR", voice_name: str = "fr-FR-Wavenet-D") -> str:
+        """
+        Génère un fichier audio à partir d'un texte en utilisant Google Cloud Text-to-Speech.
+
+        Args:
+            texte (str): Le texte à convertir en audio.
+            chemin_sortie (str): Le chemin où le fichier audio généré sera sauvegardé (ex: "reponse_ia.mp3").
+            language_code (str): Le code de langue BCP-47 (ex: "fr-FR", "en-US").
+            voice_name (str): Le nom de la voix à utiliser (ex: "fr-FR-Wavenet-D", "fr-FR-Standard-A").
+                              Les voix WaveNet sont plus naturelles.
+
+        Returns:
+            str: Le chemin d'accès au fichier audio généré.
+        """
+        if not self.tts_client:
+            logger.error("Le client TTS n'est pas initialisé.")
+            return ""
+
+        logger.debug(f"Début de la génération audio pour le texte: '{texte[:50]}...' (Langue: {language_code}, Voix: {voice_name})")
+        try:
+            # Configurer le texte d'entrée
+            synthesis_input = texttospeech.SynthesisInput(text=texte)
+
+            # Configurer la voix
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                name=voice_name,
+                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE # Ou MALE, NEUTRAL
+            )
+
+            # Configurer le format de sortie audio
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3 # Ou LINEAR16, OGG_OPUS
+            )
+
+            # Envoi de la requête à l'API Text-to-Speech
+            response = self.tts_client.synthesize_speech(
+                input=synthesis_input, voice=voice, audio_config=audio_config
+            )
+
+            # Assurez-vous que le répertoire de sortie existe
+            repertoire_sortie = os.path.dirname(chemin_sortie)
+            if repertoire_sortie and not os.path.exists(repertoire_sortie):
+                os.makedirs(repertoire_sortie)
+
+            # Écrire le contenu audio dans un fichier
+            with open(chemin_sortie, "wb") as out:
+                out.write(response.audio_content)
+                logger.info(f"Génération audio terminée. Fichier de sortie: {chemin_sortie}")
+            return chemin_sortie
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération audio avec Google Cloud Text-to-Speech : {e}", exc_info=True)
+            return ""

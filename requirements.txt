@@ -1,0 +1,29 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic-settings
+mysql-connector-python # Ou pymysql si vous préférez
+alembic # Pour les migrations de base de données
+# Pour l'intégration LLM (Gemini)
+google-generativeai
+pip install google-cloud-speech google-cloud-texttospeech
+pip install gtts SpeechRecognition
+pip install python-multipart
+pip install pydub
+install ffmpeg
+
+
+fastapi==0.111.0
+uvicorn==0.30.1
+mysql-connector-python==8.4.0
+pydantic==2.7.4 # Pydantic est une dépendance de pydantic-settings et est utilisée directement
+pydantic-settings==2.3.4
+python-jose[cryptography]==3.3.0 # Inclut la dépendance cryptography pour des performances optimales
+passlib[bcrypt]==1.7.4 # Pour le hachage des mots de passe avec bcrypt
+SpeechRecognition==3.10.0
+gTTS==2.5.1
+pydub==0.25.1
+python-dotenv==1.0.1
+pip install google-auth
+pip install httpx
+pip install firebase-admin

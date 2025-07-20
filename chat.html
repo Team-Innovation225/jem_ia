@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Santé - Assistant Médical</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Styles généraux */
+        body {
+            font-family: 'Inter', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Empêche le défilement excessif */
+        }
+        .chat-container {
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            width: 95%;
+        }
+        .chat-header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #e9ecef;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            word-wrap: break-word;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #dcf8c6;
+            color: #333;
+            border-bottom-right-radius: 2px;
+        }
+        .ai-message {
+            align-self: flex-start;
+            background-color: #ffffff;
+            color: #333;
+            border-bottom-left-radius: 2px;
+        }
+        .chat-input-container {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 1rem;
+            outline: none;
+        }
+        .send-button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        .send-button:hover {
+            background-color: #357ABD;
+        }
+        
+        /* Indicateur de chargement/réflexion de l'IA (pour le chat normal) */
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #4a90e2;
+            font-style: italic;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-indicator.active {
+            display: flex;
+        }
+
+        /* Indicateur d'enregistrement vocal (pour le chat normal) */
+        .recording-indicator {
+            display: none; /* Caché par défaut */
+            text-align: center;
+            padding: 5px;
+            color: #dc3545; /* Rouge pour indiquer l'enregistrement */
+            font-style: italic;
+            animation: pulse 1.5s infinite; /* Animation de pulsation */
+        }
+        .recording-indicator.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .mic-button {
+            background-color: #6c757d; /* Gris par défaut */
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px; /* Ajusté pour l'icône */
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+            display: flex; /* Pour centrer l'icône */
+            align-items: center;
+            justify-content: center;
+        }
+        .mic-button:hover {
+            background-color: #5a6268;
+        }
+        .mic-button.recording {
+            background-color: #dc3545; /* Rouge quand ça enregistre */
+            animation: pulse 1.5s infinite;
+        }
+        .mic-button.recording:hover {
+            background-color: #c82333;
+        }
+        .mic-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .feedback-button {
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            font-size: 1.2rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .feedback-button .emoji-icon {
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            font-size: 1.2rem;
+            line-height: 1;
+            display: inline-block;
+        }
+        .feedback-button.like {
+            background-color: #e0ffe0;
+            border-color: #a0d0a0;
+        }
+        .feedback-button.dislike {
+            background-color: #ffe0e0;
+            border-color: #d0a0d0;
+        }
+        .feedback-button:hover {
+            opacity: 0.8;
+        }
+        .feedback-button.selected {
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #4a90e2;
+        }
+
+        /* Styles pour le lecteur audio */
+        .audio-player-container {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .audio-player-container button {
+            background-color: #e0e0e0;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .audio-player-container button:hover {
+            background-color: #d0d0d0;
+        }
+        .audio-player-container button svg {
+            width: 20px;
+            height: 20px;
+            color: #333;
+        }
+
+        /* Section des contrôles de téléassistance (pour démarrer/raccrocher l'appel) */
+        .teleassistance-controls {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap; /* Pour la responsivité */
+        }
+        .call-button, .hangup-button {
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .call-button {
+            background-color: #28a745; /* Vert pour démarrer */
+            color: white;
+            border: none;
+        }
+        .call-button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        .hangup-button {
+            background-color: #dc3545; /* Rouge pour raccrocher */
+            color: white;
+            border: none;
+            display: none; /* Caché par défaut */
+        }
+        .hangup-button:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+        .call-status {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-style: italic;
+            display: none; /* Caché par défaut */
+        }
+        .call-status.active {
+            display: block;
+            color: #28a745; /* Vert quand en appel */
+            font-weight: bold;
+        }
+        .call-status.recording-active {
+            color: #dc3545; /* Rouge quand enregistrement actif dans l'appel */
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Ajustements pour les petits écrans */
+        @media (max-width: 600px) {
+            .chat-input-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .chat-input, .send-button, .mic-button {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            .teleassistance-controls {
+                flex-direction: column;
+            }
+            .call-button, .hangup-button {
+                width: 100%;
+            }
+        }
+
+        /* Styles pour l'animation de parole de l'IA (points de réflexion) */
+        .ai-thinking-indicator { /* Renommé pour plus de clarté */
+            display: inline-flex;
+            align-items: center;
+            margin-left: 10px;
+            height: 1em;
+        }
+        .ai-thinking-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #4a90e2;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: speak-pulse 1.4s infinite ease-in-out;
+        }
+        .ai-thinking-indicator span:nth-child(1) { animation-delay: 0s; }
+        .ai-thinking-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .ai-thinking-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes speak-pulse {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* NOUVEAUX STYLES POUR L'INTERFACE D'APPEL */
+        .call-interface {
+            display: none; /* Caché par défaut */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            padding: 2rem;
+            background-color: #e9ecef;
+            gap: 20px;
+        }
+
+        .call-interface.active {
+            display: flex;
+        }
+
+        .push-to-talk-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #4a90e2;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease-in-out;
+            border: 5px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .push-to-talk-button:hover {
+            background-color: #357ABD;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .push-to-talk-button.recording {
+            background-color: #dc3545; /* Rouge vif quand on parle */
+            animation: pulse-border 1.5s infinite ease-out, scale-up 0.3s forwards;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .push-to-talk-button.recording:hover {
+            background-color: #c82333;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        @keyframes scale-up {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .ai-speaking-waveform {
+            display: none; /* Caché par défaut */
+            width: 100px;
+            height: 40px;
+            background-color: #fff;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .ai-speaking-waveform.active {
+            display: flex;
+        }
+
+        .ai-speaking-waveform span {
+            width: 8px;
+            height: 8px;
+            background-color: #4a90e2;
+            border-radius: 50%;
+            animation: wave-pulse 1.2s infinite ease-in-out;
+        }
+
+        .ai-speaking-waveform span:nth-child(1) { animation-delay: 0s; }
+        .ai-speaking-waveform span:nth-child(2) { animation-delay: 0.1s; }
+        .ai-speaking-waveform span:nth-child(3) { animation-delay: 0.2s; }
+        .ai-speaking-waveform span:nth-child(4) { animation-delay: 0.3s; }
+        .ai-speaking-waveform span:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave-pulse {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(2.5); background-color: #357ABD; }
+        }
+
+        .call-message-display {
+            background-color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            max-width: 90%;
+            text-align: center;
+            font-size: 1.1rem;
+            color: #333;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Masquer le texte de l'IA dans la bulle de message pendant l'appel */
+        .ai-message.call-mode-hidden-text .message-content {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Assistant Médical IA
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Les messages seront ajoutés ici par JavaScript -->
+            <div class="message-bubble ai-message">
+                <span class="message-content">Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd'hui ?</span>
+            </div>
+        </div>
+        
+        <!-- Interface d'appel (initialement cachée) -->
+        <div class="call-interface" id="callInterface">
+            <div class="call-message-display" id="callMessageDisplay">
+                Appel démarré. Appuyez et maintenez le bouton pour parler.
+            </div>
+            <button id="pushToTalkButton" class="push-to-talk-button">
+                Parler
+            </button>
+            <div class="ai-speaking-waveform" id="aiSpeakingWaveform">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <!-- Indicateur de chargement/réflexion de l'IA pour le mode CHAT -->
+        <div class="loading-indicator" id="chatLoadingIndicator">
+            L'IA réfléchit...
+            <div class="ai-thinking-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <!-- Indicateur d'enregistrement vocal pour le mode CHAT -->
+        <div class="recording-indicator" id="chatRecordingIndicator">
+            Enregistrement en cours...
+        </div>
+
+        <!-- Section des contrôles de téléassistance (pour démarrer/raccrocher l'appel) -->
+        <div class="teleassistance-controls">
+            <button id="callButton" class="call-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 0 1-.606 1.907L6.75 11.25a11.25 11.25 0 0 0 11.25 11.25l1.44-1.793a1.875 1.875 0 0 1 1.907-.606l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 0 1-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5Z" clip-rule="evenodd" />
+                </svg>
+                Démarrer l'appel
+            </button>
+            <button id="hangupButton" class="hangup-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 0 1-.606 1.907L6.75 11.25a11.25 11.25 0 0 0 11.25 11.25l1.44-1.793a1.875 1.875 0 0 1 1.907-.606l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 0 1-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5Z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd" d="M12 2.25c-5.405 0-10.807 1.39-15 3.99l1.5 1.5c3.6-2.25 7.6-3.39 10.5-3.39 2.9 0 6.9 1.14 10.5 3.39l1.5-1.5c-4.193-2.6-9.595-3.99-15-3.99Z" clip-rule="evenodd" />
+                </svg>
+                Raccrocher
+            </button>
+            <span id="callStatus" class="call-status"></span>
+        </div>
+
+        <!-- Conteneur d'entrée de chat (visible par défaut, masqué en mode appel) -->
+        <div class="chat-input-container" id="chatInputContainer">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Écrivez votre message...">
+            <button id="micButton" class="mic-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" />
+                    <path d="M12 2.25c-2.485 0-4.5 2.015-4.5 4.5v.75c0 2.485 2.015 4.5 4.5 4.5s4.5-2.015 4.5-4.5V6.75c0-2.485-2.015-4.5-4.5-4.5ZM12 15a5.25 5.25 0 0 1-5.25-5.25v-.75a.75.75 0 0 0-1.5 0v.75a6.75 6.75 0 0 0 13.5 0v-.75a.75.75 0 0 0-1.5 0v.75A5.25 5.25 0 0 1 12 15Z" />
+                    <path d="M6.75 19.5a.75.75 0 0 0 1.5 0v-2.25a.75.75 0 0 0-1.5 0v2.25Z" />
+                    <path d="M17.25 19.5a.75.75 0 0 0 1.5 0v-2.25a.75.75 0 0 0-1.5 0v2.25Z" />
+                </svg>
+            </button>
+            <button id="sendButton" class="send-button">Envoyer</button>
+        </div>
+    </div>
+
+    <script>
+        // Vérification de l'authentification Firebase avant d'afficher le chat
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'index.html'; // Redirige vers la page de connexion si non authentifié
+            }
+        });
+
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMessages = document.getElementById('chatMessages');
+        
+        // Indicateurs pour le mode CHAT
+        const chatLoadingIndicator = document.getElementById('chatLoadingIndicator');
+        const chatRecordingIndicator = document.getElementById('chatRecordingIndicator');
+        const aiThinkingIndicator = document.querySelector('.ai-thinking-indicator'); // Les points de réflexion
+
+        // Éléments pour le mode APPEL
+        const callButton = document.getElementById('callButton');
+        const hangupButton = document.getElementById('hangupButton');
+        const callStatus = document.getElementById('callStatus');
+        const chatInputContainer = document.getElementById('chatInputContainer'); // Conteneur du mode chat
+        const callInterface = document.getElementById('callInterface'); // Conteneur du mode appel
+        const pushToTalkButton = document.getElementById('pushToTalkButton');
+        const aiSpeakingWaveform = document.getElementById('aiSpeakingWaveform'); // Animation de son de l'IA
+        const callMessageDisplay = document.getElementById('callMessageDisplay'); // Message d'état dans l'appel
+
+        let sessionId = null;
+        let mediaRecorder; // Pour le chat vocal (message unique)
+        let audioChunks = [];
+        let audioBlob = null;
+        let isRecordingChat = false; // Pour le mode chat vocal (message unique)
+
+        let callWebSocket;
+        let isCallActive = false;
+        let callMediaRecorder; // Pour l'appel continu (Push-to-Talk)
+        let callAudioStream;
+        let currentAudioPlayer = null; // Gère la lecture audio de l'IA
+
+        // Fonction pour générer un ID de session unique (UUID v4)
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Fonction pour ajouter un message à l'interface
+        function addMessage(message, sender, messageId = null, audioPath = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message-bubble');
+            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+            
+            // Si c'est un message de l'IA en mode appel, le texte est masqué dans la bulle
+            if (sender === 'ai' && isCallActive) {
+                messageDiv.classList.add('call-mode-hidden-text');
+                // Afficher le texte dans le callMessageDisplay pour le feedback utilisateur
+                callMessageDisplay.textContent = message;
+            } else {
+                // Pour les messages utilisateur ou les messages IA en mode chat, afficher le texte normalement
+                messageDiv.innerHTML = `<span class="message-content">${message}</span>`;
+            }
+
+            if (audioPath && sender === 'ai') {
+                const audioPlayerContainer = document.createElement('div');
+                audioPlayerContainer.classList.add('audio-player-container');
+
+                const playButton = document.createElement('button');
+                playButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                        <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643L18.75 12l-11.47 7.99C6.029 20.333 4.5 19.426 4.5 18.003V5.653Z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                playButton.title = "Écouter la réponse";
+
+                const audio = new Audio(audioPath);
+                currentAudioPlayer = audio; // Mettre à jour le lecteur audio courant
+
+                playButton.addEventListener('click', () => {
+                    if (audio.paused) {
+                        audio.play().catch(e => console.error("Erreur de lecture audio:", e));
+                    } else {
+                        audio.pause();
+                    }
+                });
+
+                audio.onplay = () => {
+                    playButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0a.75.75 0 0 1 .75-.75H16.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75V5.25Z" clip-rule="evenodd" />
+                        </svg>
+                    `; // Icône Pause
+                    // Afficher l'animation de parole de l'IA quand l'audio joue
+                    aiSpeakingWaveform.classList.add('active'); // NOUVEAU: Activer l'animation de la forme d'onde
+                    chatLoadingIndicator.classList.remove('active'); // Cacher l'indicateur de réflexion du chat
+                    aiThinkingIndicator.style.display = 'none'; // Cacher les points de réflexion du chat
+                    callStatus.classList.remove('recording-active'); // Cacher l'animation du micro de l'appel
+                    pushToTalkButton.textContent = "Écoute..."; // Mettre à jour le texte du bouton PTT
+                };
+
+                audio.onpause = audio.onended = () => {
+                    playButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643L18.75 12l-11.47 7.99C6.029 20.333 4.5 19.426 4.5 18.003V5.653Z" clip-rule="evenodd" />
+                        </svg>
+                    `; // Icône Play
+                    // Cacher l'animation de parole de l'IA quand l'audio est en pause ou terminé
+                    aiSpeakingWaveform.classList.remove('active'); // NOUVEAU: Désactiver l'animation de la forme d'onde
+                    // Si l'appel est toujours actif, revenir à l'état "En appel..."
+                    if (isCallActive) {
+                        callStatus.textContent = "En appel...";
+                        callStatus.classList.add('recording-active'); // Réactiver l'animation du micro
+                        pushToTalkButton.textContent = "Parler"; // Réinitialiser le texte du bouton PTT
+                    }
+                };
+
+                audioPlayerContainer.appendChild(playButton);
+                messageDiv.appendChild(audioPlayerContainer);
+                
+                // Lancer la lecture audio automatiquement
+                audio.play().catch(e => console.error("Erreur de lecture audio automatique:", e));
+            }
+
+            chatMessages.appendChild(messageDiv);
+
+            // Ajouter les boutons de feedback pour les messages de l'IA (seulement en mode chat)
+            if (sender === 'ai' && messageId !== null && !isCallActive) {
+                const feedbackContainer = document.createElement('div');
+                feedbackContainer.classList.add('feedback-buttons');
+                feedbackContainer.dataset.messageId = messageId;
+
+                const likeButton = document.createElement('button');
+                likeButton.classList.add('feedback-button', 'like');
+                likeButton.innerHTML = '<span class="emoji-icon">👍</span> Utile';
+                likeButton.onclick = () => sendFeedback(messageId, 1, feedbackContainer);
+
+                const dislikeButton = document.createElement('button');
+                dislikeButton.classList.add('feedback-button', 'dislike');
+                dislikeButton.innerHTML = '<span class="emoji-icon">👎</span> Pas utile';
+                dislikeButton.onclick = () => sendFeedback(messageId, 0, feedbackContainer);
+
+                feedbackContainer.appendChild(likeButton);
+                feedbackContainer.appendChild(dislikeButton);
+                messageDiv.appendChild(feedbackContainer);
+            }
+
+            // Faire défiler vers le bas pour voir le dernier message
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Fonction pour envoyer le feedback au backend
+        async function sendFeedback(messageId, feedbackValue, feedbackContainer) {
+            Array.from(feedbackContainer.children).forEach(button => {
+                button.disabled = true;
+                button.classList.remove('selected');
+            });
+
+            const selectedButton = feedbackValue === 1 ? feedbackContainer.querySelector('.like') : feedbackContainer.querySelector('.dislike');
+            selectedButton.classList.add('selected');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/v1/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message_id: messageId,
+                        feedback_value: feedbackValue,
+                        id_session: sessionId
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Erreur lors de l\'envoi du feedback:', errorData.detail);
+                    Array.from(feedbackContainer.children).forEach(button => button.disabled = false);
+                    selectedButton.classList.remove('selected');
+                } else {
+                    console.log('Feedback envoyé avec succès pour le message ID DB:', messageId, 'Valeur:', feedbackValue);
+                    const confirmation = document.createElement('span');
+                    confirmation.textContent = ' Merci pour votre feedback !';
+                    confirmation.style.marginLeft = '10px';
+                    confirmation.style.color = '#4a90e2';
+                    feedbackContainer.appendChild(confirmation);
+                }
+            } catch (error) {
+                console.error('Erreur réseau lors de l\'envoi du feedback:', error);
+                Array.from(feedbackContainer.children).forEach(button => button.disabled = false);
+                selectedButton.classList.remove('selected');
+            }
+        }
+
+        // Fonction pour envoyer un message TEXTE ou un message VOCAL (fichier complet) - Mode Chat
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            let formData = new FormData();
+            
+            if (!sessionId) {
+                sessionId = generateUUID();
+                console.log('Nouvelle session démarrée avec ID:', sessionId);
+            }
+
+            if (isRecordingChat) { // Utiliser isRecordingChat pour le mode chat
+                mediaRecorder.stop();
+                return;
+            }
+
+            if (audioBlob) {
+                addMessage('Message vocal...', 'user');
+                formData.append('audio_file', audioBlob, 'voice_message.webm');
+                formData.append('message', '');
+                formData.append('id_session', sessionId);
+            } else if (text) {
+                addMessage(text, 'user');
+                formData.append('message', text);
+                formData.append('id_session', sessionId);
+            } else {
+                return;
+            }
+
+            chatInput.value = '';
+            audioBlob = null;
+
+            chatLoadingIndicator.classList.add('active'); // Activer l'indicateur de chargement du chat
+            aiThinkingIndicator.style.display = 'inline-flex'; // Afficher les points
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/v1/conversation/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                chatLoadingIndicator.classList.remove('active'); // Désactiver l'indicateur de chargement du chat
+                aiThinkingIndicator.style.display = 'none'; // Cacher les points
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    const errorMessage = errorData.detail || 'Une erreur inconnue est survenue.';
+                    addMessage(`Erreur: ${errorMessage}`, 'ai');
+                    console.error('Erreur de l\'API:', errorData);
+                    return;
+                }
+
+                const data = await response.json();
+                addMessage(data.reponse_ia, 'ai', data.ai_message_db_id, data.chemin_audio_reponse_ia);
+
+            } catch (error) {
+                chatLoadingIndicator.classList.remove('active'); // Désactiver l'indicateur de chargement du chat
+                aiThinkingIndicator.style.display = 'none'; // Cacher les points
+                addMessage('Erreur réseau: Impossible de se connecter au serveur.', 'ai');
+                console.error('Erreur réseau:', error);
+            }
+        }
+
+        // Écouteurs d'événements pour le mode chat (texte et vocal)
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // --- Logique d'enregistrement vocal pour le mode chat (message unique) ---
+        micButton.addEventListener('click', async () => {
+            if (!isRecordingChat) { // Utiliser isRecordingChat
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        stream.getTracks().forEach(track => track.stop());
+                        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        sendMessage();
+                    };
+
+                    mediaRecorder.start();
+                    isRecordingChat = true; // Mettre à jour l'état
+                    micButton.classList.add('recording');
+                    chatRecordingIndicator.classList.add('active'); // Activer l'indicateur d'enregistrement du chat
+                    chatInput.disabled = true;
+                    sendButton.disabled = true;
+                    callButton.disabled = true; // Désactiver le bouton d'appel pendant l'enregistrement chat
+                } catch (err) {
+                    console.error('Erreur d\'accès au microphone ou de MediaRecorder:', err);
+                    addMessage("Impossible d'accéder au microphone. Veuillez vérifier les permissions de votre navigateur.", 'ai');
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecordingChat = false; // Mettre à jour l'état
+                micButton.classList.remove('recording');
+                chatRecordingIndicator.classList.remove('active'); // Désactiver l'indicateur d'enregistrement du chat
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                callButton.disabled = false; // Réactiver le bouton d'appel
+            }
+        });
+
+
+        // --- Logique de téléassistance (appel en temps réel) ---
+        callButton.addEventListener('click', startCall);
+        hangupButton.addEventListener('click', stopCall);
+
+        async function startCall() {
+            if (isCallActive) return;
+
+            if (!sessionId) {
+                sessionId = generateUUID();
+                console.log('Nouvelle session d\'appel démarrée avec ID:', sessionId);
+            }
+
+            try {
+                callAudioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 48000,
+                        channelCount: 1
+                    }
+                });
+                
+                callMediaRecorder = new MediaRecorder(callAudioStream, { mimeType: 'audio/webm;codecs=opus' });
+
+                callMediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0 && callWebSocket.readyState === WebSocket.OPEN) {
+                        callWebSocket.send(event.data);
+                    }
+                };
+
+                callMediaRecorder.onstop = () => {
+                    callAudioStream.getTracks().forEach(track => track.stop());
+                    console.log("Enregistrement d'appel arrêté.");
+                    pushToTalkButton.classList.remove('recording'); // Désactiver l'animation PTT
+                    pushToTalkButton.textContent = "Relâché"; // Temporaire, sera mis à jour par la réponse IA
+                    callMessageDisplay.textContent = "Relâché. L'IA réfléchit...";
+                    // Activer les indicateurs de réflexion pour le mode appel
+                    chatLoadingIndicator.classList.add('active'); // Utiliser l'indicateur de chargement global
+                    aiThinkingIndicator.style.display = 'inline-flex'; // Afficher les points de réflexion
+                };
+
+                callWebSocket = new WebSocket(`ws://127.0.0.1:8000/api/v1/ws/teleassistance`);
+
+                callWebSocket.onopen = (event) => {
+                    console.log("WebSocket d'appel connecté.");
+                    isCallActive = true;
+                    updateUI(); // Mettre à jour l'UI pour le mode appel
+                    // Envoyer l'ID de session au backend pour initialiser la session WebSocket
+                    callWebSocket.send(JSON.stringify({ type: "SESSION_INIT", id_session: sessionId }));
+                    callMessageDisplay.textContent = "Appel démarré. Appuyez et maintenez le bouton pour parler.";
+                };
+
+                callWebSocket.onmessage = async (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log("Réponse d'appel WebSocket reçue:", data);
+                    
+                    if (data.type === "AI_THINKING") {
+                        chatLoadingIndicator.classList.add('active'); // Activer l'indicateur de chargement global
+                        aiThinkingIndicator.style.display = 'inline-flex'; // Afficher les points de réflexion
+                        aiSpeakingWaveform.classList.remove('active'); // S'assurer que l'animation de parole est désactivée
+                        callStatus.textContent = "L'IA réfléchit...";
+                        callStatus.classList.remove('recording-active'); // Cacher l'animation du micro pendant que l'IA réfléchit
+                        pushToTalkButton.textContent = "L'IA réfléchit..."; // Mettre à jour le texte du bouton PTT
+                        if (currentAudioPlayer) {
+                            currentAudioPlayer.pause();
+                            currentAudioPlayer.currentTime = 0;
+                        }
+                    } else if (data.type === "AI_RESPONSE") {
+                        chatLoadingIndicator.classList.remove('active'); // Désactiver l'indicateur de chargement global
+                        aiThinkingIndicator.style.display = 'none'; // Cacher les points de réflexion
+                        callStatus.textContent = "En appel...";
+                        callStatus.classList.add('recording-active'); // Réactiver l'animation du micro
+                        // Afficher la réponse texte (transcription) et jouer l'audio
+                        addMessage(data.reponse_ia, 'ai', data.ai_message_db_id, data.chemin_audio_reponse_ia);
+                        // Le texte du bouton PTT sera mis à jour par onplay/onended de l'audio
+                    } else if (data.type === "END_CALL_CONFIRM") {
+                        chatLoadingIndicator.classList.remove('active');
+                        aiThinkingIndicator.style.display = 'none';
+                        aiSpeakingWaveform.classList.remove('active');
+                        callStatus.textContent = "Appel terminé.";
+                        callStatus.classList.remove('recording-active');
+                        addMessage(data.reponse_ia, 'ai'); // Afficher le message de fin d'appel
+                        callMessageDisplay.textContent = data.reponse_ia; // Mettre à jour le message d'état
+                        if (currentAudioPlayer) {
+                            currentAudioPlayer.pause();
+                            currentAudioPlayer.currentTime = 0;
+                        }
+                    } else if (data.type === "AI_ERROR") {
+                        chatLoadingIndicator.classList.remove('active');
+                        aiThinkingIndicator.style.display = 'none';
+                        aiSpeakingWaveform.classList.remove('active');
+                        callStatus.textContent = "Erreur d'appel.";
+                        callStatus.classList.remove('recording-active');
+                        addMessage(data.reponse_ia, 'ai');
+                        callMessageDisplay.textContent = data.reponse_ia; // Mettre à jour le message d'état
+                        if (currentAudioPlayer) {
+                            currentAudioPlayer.pause();
+                            currentAudioPlayer.currentTime = 0;
+                        }
+                    } else if (data.type === "USER_TRANSCRIPTION") {
+                        // Afficher la transcription de l'utilisateur dans le chat
+                        addMessage(`Vous: ${data.transcription}`, 'user');
+                        callMessageDisplay.textContent = `Vous avez dit: "${data.transcription}"`;
+                    }
+                };
+
+                callWebSocket.onclose = (event) => {
+                    console.log("WebSocket d'appel déconnecté:", event);
+                    isCallActive = false;
+                    updateUI(); // Mettre à jour l'UI pour revenir au mode chat
+                    chatLoadingIndicator.classList.remove('active'); // Assurez-vous que l'indicateur de chargement est masqué
+                    aiThinkingIndicator.style.display = 'none'; // Assurez-vous que les points sont masqués
+                    aiSpeakingWaveform.classList.remove('active'); // Assurez-vous que l'animation de parole de l'IA est masquée
+                    callMessageDisplay.textContent = "Appel terminé."; // Message final si pas de confirmation
+                };
+
+                callWebSocket.onerror = (error) => {
+                    console.error("Erreur WebSocket d'appel:", error);
+                    isCallActive = false;
+                    updateUI(); // Mettre à jour l'UI pour revenir au mode chat
+                    callStatus.textContent = "Erreur d'appel.";
+                    callStatus.classList.remove('recording-active');
+                    chatLoadingIndicator.classList.remove('active');
+                    aiThinkingIndicator.style.display = 'none';
+                    aiSpeakingWaveform.classList.remove('active');
+                    addMessage("Désolé, une erreur de connexion est survenue pendant l'appel. Veuillez réessayer.", 'ai');
+                    callMessageDisplay.textContent = "Erreur de connexion. Veuillez réessayer.";
+                };
+
+            } catch (err) {
+                console.error('Erreur d\'accès au microphone pour l\'appel:', err);
+                addMessage("Impossible d'accéder au microphone pour l'appel. Vérifiez les permissions.", 'ai');
+                callMessageDisplay.textContent = "Erreur micro. Vérifiez les permissions.";
+            }
+        }
+
+        function stopCall() {
+            if (!isCallActive) return;
+
+            if (callMediaRecorder && callMediaRecorder.state !== 'inactive') {
+                callMediaRecorder.stop();
+            }
+            if (callAudioStream) {
+                callAudioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Arrêter la lecture audio précédente si elle existe
+            if (currentAudioPlayer) {
+                currentAudioPlayer.pause();
+                currentAudioPlayer.currentTime = 0;
+            }
+
+            if (callWebSocket && callWebSocket.readyState === WebSocket.OPEN) {
+                callWebSocket.send(JSON.stringify({ type: "END_CALL" }));
+                console.log("Signal END_CALL envoyé au backend. En attente de la fermeture par le serveur.");
+                callStatus.textContent = "Fin de l'appel...";
+                callStatus.classList.remove('recording-active');
+                chatLoadingIndicator.classList.add('active'); // Afficher un indicateur de fin
+                aiThinkingIndicator.style.display = 'inline-flex'; // Afficher les points de réflexion
+                aiSpeakingWaveform.classList.remove('active'); // S'assurer que l'animation de parole est désactivée
+                callMessageDisplay.textContent = "Raccrochage en cours...";
+            } else {
+                isCallActive = false;
+                updateUI(); // Mettre à jour l'UI pour revenir au mode chat
+                callStatus.textContent = "Appel terminé.";
+                callStatus.classList.remove('recording-active');
+                chatLoadingIndicator.classList.remove('active');
+                aiThinkingIndicator.style.display = 'none';
+                aiSpeakingWaveform.classList.remove('active');
+                addMessage("L'appel a été terminé (connexion déjà fermée ou non établie).", 'ai');
+                callMessageDisplay.textContent = "Appel terminé.";
+            }
+        }
+
+        // Fonction unique pour mettre à jour l'UI en fonction du mode (chat ou appel)
+        function updateUI() {
+            if (isCallActive) {
+                // Mode Appel
+                callButton.style.display = 'none';
+                hangupButton.style.display = 'flex';
+                callStatus.classList.add('active'); // Afficher le statut d'appel
+                chatInputContainer.style.display = 'none'; // Masquer l'interface de chat
+                callInterface.classList.add('active'); // Afficher l'interface d'appel
+
+                // Masquer les indicateurs de chat
+                chatLoadingIndicator.classList.remove('active');
+                chatRecordingIndicator.classList.remove('active');
+                aiThinkingIndicator.style.display = 'none';
+
+            } else {
+                // Mode Chat
+                callButton.style.display = 'flex';
+                hangupButton.style.display = 'none';
+                callStatus.classList.remove('active'); // Masquer le statut d'appel
+                chatInputContainer.style.display = 'flex'; // Afficher l'interface de chat
+                callInterface.classList.remove('active'); // Masquer l'interface d'appel
+
+                // S'assurer que les indicateurs d'appel sont masqués
+                aiSpeakingWaveform.classList.remove('active');
+                pushToTalkButton.classList.remove('recording');
+                // Les indicateurs de chat seront gérés par leurs propres fonctions
+            }
+        }
+
+        // Initialisation: Demander la permission du micro au chargement de la page
+        window.onload = () => {
+            if (!sessionId) {
+                sessionId = generateUUID();
+                console.log('Session ID généré au chargement:', sessionId);
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    stream.getTracks().forEach(track => track.stop());
+                    console.log("Accès au microphone accordé.");
+                    updateUI(); // Mettre à jour l'UI au démarrage (mode chat par défaut)
+                })
+                .catch(err => {
+                    console.warn("Accès au microphone refusé ou erreur:", err);
+                    // Désactiver les fonctionnalités micro dans les deux modes si l'accès est refusé
+                    document.getElementById('micButton').disabled = true;
+                    document.getElementById('micButton').title = "Accès au microphone refusé";
+                    callButton.disabled = true;
+                    callButton.title = "Accès au microphone refusé";
+                    pushToTalkButton.disabled = true;
+                    pushToTalkButton.title = "Accès au microphone refusé";
+                    updateUI(); // Mettre à jour l'UI même en cas d'erreur
+                    callMessageDisplay.textContent = "Erreur micro. Veuillez accorder les permissions.";
+                });
+        };
+    </script>
+</body>
+</html>

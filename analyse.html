@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur de Documents Médicaux IA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-weight: 600;
+            color: #2c3e50; /* Darker blue-gray */
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e7ff; /* Light indigo border */
+            padding-bottom: 5px;
+        }
+        .input-area, .output-area {
+            background-color: #f8fafc; /* Lighter blue-gray for input/output */
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e2e8f0; /* Light gray border */
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #6366f1; /* Indigo focus */
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 25px;
+            background-image: linear-gradient(to right, #6366f1, #8b5cf6); /* Indigo to Violet gradient */
+            color: white;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+        }
+        button:hover {
+            background-image: linear-gradient(to right, #4f46e5, #7c3aed);
+            box-shadow: 0 7px 20px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background-image: linear-gradient(to right, #a7a7a7, #cccccc);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-item {
+            margin-bottom: 15px;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e0e7ff;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #4338ca; /* Darker indigo */
+            margin-bottom: 5px;
+        }
+        .result-value {
+            color: #334155; /* Slate 700 */
+            line-height: 1.6;
+        }
+        .result-list-item {
+            margin-left: 20px;
+            list-style-type: disc;
+            color: #475569; /* Slate 600 */
+        }
+        .error-message {
+            background-color: #fee2e2; /* Red 100 */
+            color: #ef4444; /* Red 500 */
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #fca5a5; /* Red 300 */
+            font-weight: 500;
+        }
+        .info-message {
+            background-color: #e0f2fe; /* Light blue */
+            color: #0d9488; /* Teal 700 */
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #a7f3d0; /* Green 300 */
+            font-weight: 500;
+        }
+        .placeholder-text {
+            color: #64748b; /* Slate 500 */
+            font-style: italic;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #e2e8f0;
+        }
+        .file-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .file-input-label {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .file-input-label:hover {
+            background-color: #c7d2fe;
+        }
+        input[type="file"] {
+            display: none; /* Hide default file input */
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container">
+        <div class="header">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Analyseur de Documents Médicaux</h1>
+            <p class="text-lg text-gray-600">Transformez vos documents médicaux (images) en informations structurées et compréhensibles.</p>
+        </div>
+
+        <div class="input-area">
+            <h2 class="section-title text-2xl">1. Chargez votre document (image)</h2>
+            <p class="text-gray-700 mb-4">
+                Téléchargez une image de votre ordonnance, rapport ou autre document médical. L'IA extraira le texte pour vous.
+            </p>
+            <div class="file-input-container">
+                <label for="fileInput" class="file-input-label">
+                    Choisir un fichier
+                </label>
+                <span id="fileName" class="text-gray-600">Aucun fichier choisi</span>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            <img id="imagePreview" class="image-preview hidden" src="#" alt="Aperçu du document">
+
+            <div class="flex justify-center mt-6 mb-4">
+                <button id="extractTextButton" class="flex items-center" disabled>
+                    Extraire le Texte de l'Image
+                    <span id="extractSpinner" class="spinner hidden"></span>
+                </button>
+            </div>
+
+            <h2 class="section-title text-2xl mt-8">2. Texte extrait (ou collez manuellement)</h2>
+            <p class="text-gray-700 mb-4">
+                Le texte extrait de l'image apparaîtra ici. Vous pouvez également coller du texte directement.
+            </p>
+            <textarea id="documentContent" placeholder="Le texte extrait de votre document apparaîtra ici, ou collez le texte manuellement..." class="focus:border-indigo-500"></textarea>
+            <div class="placeholder-text">
+                <p>Exemple de texte pour test manuel (si pas d'image) :</p>
+                <pre class="bg-gray-100 p-3 rounded-md text-sm mt-2 overflow-auto">
+Rapport de laboratoire
+Date: 2023-11-01
+Patient: Marie Dubois, Née le 1995-03-20, Sexe: Féminin
+ID Patient: MD12345
+
+Résultats:
+- Glycémie à jeun: 7.2 mmol/L (Valeur de référence: 4.0-6.0 mmol/L) - Élevée
+- Hémoglobine glyquée (HbA1c): 7.8% (Valeur de référence: < 6.5%) - Élevée
+- Créatinine: 80 µmol/L (Valeur de référence: 60-110 µmol/L) - Normale
+
+Diagnostic: Diabète de type 2 nouvellement diagnostiqué.
+Symptômes: Fatigue, soif excessive, mictions fréquentes.
+
+Médicaments prescrits:
+- Metformine 500 mg, deux fois par jour, par voie orale.
+- Vitamine D 1000 UI, une fois par jour.
+
+Recommandations:
+- Consultation avec un endocrinologue sous 2 semaines.
+- Suivi diététique.
+- Exercice physique régulier.
+- Contrôle de la glycémie à domicile.
+
+Notes: Le patient a été informé des changements de mode de vie nécessaires.
+                </pre>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button id="analyzeButton" class="flex items-center" disabled>
+                Analyser le Document
+                <span id="analyzeSpinner" class="spinner hidden"></span>
+            </button>
+        </div>
+
+        <div id="errorMessage" class="error-message hidden"></div>
+        <div id="infoMessage" class="info-message hidden"></div>
+
+        <div id="analysisResult" class="output-area hidden">
+            <h2 class="section-title text-2xl">3. Résultat de l'Analyse IA</h2>
+            <div id="resultContent">
+                <!-- Les résultats de l'analyse seront insérés ici -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileNameSpan = document.getElementById('fileName');
+        const imagePreview = document.getElementById('imagePreview');
+        const extractTextButton = document.getElementById('extractTextButton');
+        const extractSpinner = document.getElementById('extractSpinner');
+        const documentContentTextarea = document.getElementById('documentContent');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const analyzeSpinner = document.getElementById('analyzeSpinner');
+        const analysisResultDiv = document.getElementById('analysisResult');
+        const resultContentDiv = document.getElementById('resultContent');
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const infoMessageDiv = document.getElementById('infoMessage');
+
+        let base64Image = ''; // Pour stocker l'image en base64
+
+        // Fonction pour afficher les messages d'erreur ou d'information
+        function showMessage(element, message, type = 'error') {
+            element.textContent = message;
+            element.classList.remove('hidden');
+            if (type === 'error') {
+                element.classList.remove('info-message');
+                element.classList.add('error-message');
+            } else {
+                element.classList.remove('error-message');
+                element.classList.add('info-message');
+            }
+        }
+
+        function hideMessage(element) {
+            element.classList.add('hidden');
+            element.textContent = '';
+        }
+
+        // Gérer le changement de fichier
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameSpan.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                    base64Image = e.target.result.split(',')[1]; // Extraire la partie base64
+                    extractTextButton.disabled = false; // Activer le bouton d'extraction
+                    documentContentTextarea.value = ''; // Réinitialiser le texte extrait
+                    analyzeButton.disabled = true; // Désactiver le bouton d'analyse
+                    hideMessage(errorMessageDiv);
+                    hideMessage(infoMessageDiv);
+                    analysisResultDiv.classList.add('hidden');
+                };
+                reader.onerror = () => {
+                    showMessage(errorMessageDiv, "Erreur lors de la lecture du fichier.");
+                    base64Image = '';
+                    extractTextButton.disabled = true;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                fileNameSpan.textContent = 'Aucun fichier choisi';
+                imagePreview.classList.add('hidden');
+                imagePreview.src = '#';
+                base64Image = '';
+                extractTextButton.disabled = true;
+                documentContentTextarea.value = '';
+                analyzeButton.disabled = true;
+            }
+        });
+
+        // Gérer l'extraction de texte de l'image via Gemini Vision
+        extractTextButton.addEventListener('click', async () => {
+            if (!base64Image) {
+                showMessage(errorMessageDiv, "Veuillez d'abord charger une image.");
+                return;
+            }
+
+            hideMessage(errorMessageDiv);
+            hideMessage(infoMessageDiv);
+            documentContentTextarea.value = ''; // Clear previous content
+            analyzeButton.disabled = true; // Disable analysis until text is extracted
+
+            extractSpinner.classList.remove('hidden');
+            extractTextButton.disabled = true;
+            extractTextButton.textContent = 'Extraction en cours...';
+
+            try {
+                let chatHistory = [];
+                const prompt = "Extrayez tout le texte visible de cette image de document médical. Présentez le texte de manière claire et lisible, en conservant la mise en page si possible.";
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inlineData: {
+                                        mimeType: "image/png", // Ou image/jpeg, selon le type de l'image chargée
+                                        data: base64Image
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                };
+                const apiKey = "AIzaSyDUa5gv_m7S8Y18euHTs4XmVFIIg7585Tw"; // L'API key sera fournie par l'environnement Canvas
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `Erreur HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const extractedText = result.candidates[0].content.parts[0].text;
+                    documentContentTextarea.value = extractedText;
+                    analyzeButton.disabled = false; // Activer le bouton d'analyse
+                    showMessage(infoMessageDiv, "Texte extrait avec succès ! Vous pouvez maintenant analyser le document.", 'info');
+                } else {
+                    throw new Error("Aucun texte n'a pu être extrait de l'image.");
+                }
+
+            } catch (error) {
+                console.error('Erreur lors de l\'extraction du texte de l\'image:', error);
+                showMessage(errorMessageDiv, `Erreur d'extraction: ${error.message}. Veuillez vérifier l'image ou essayer de coller le texte manuellement.`);
+                documentContentTextarea.value = ''; // Clear on error
+            } finally {
+                extractSpinner.classList.add('hidden');
+                extractTextButton.disabled = false;
+                extractTextButton.innerHTML = 'Extraire le Texte de l\'Image';
+            }
+        });
+
+
+        // Gérer l'analyse du document via l'API FastAPI
+        analyzeButton.addEventListener('click', async () => {
+            const documentContent = documentContentTextarea.value.trim();
+
+            if (!documentContent) {
+                showMessage(errorMessageDiv, "Veuillez extraire ou coller le contenu du document médical avant d'analyser.");
+                hideMessage(infoMessageDiv);
+                return;
+            }
+
+            // Cacher les messages précédents
+            hideMessage(errorMessageDiv);
+            hideMessage(infoMessageDiv);
+            analysisResultDiv.classList.add('hidden');
+            resultContentDiv.innerHTML = ''; // Nettoyer les anciens résultats
+
+            // Afficher le spinner et désactiver le bouton
+            analyzeSpinner.classList.remove('hidden');
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = 'Analyse en cours...';
+
+            try {
+                // L'URL de votre API FastAPI pour l'analyse de documents
+                const apiUrl = '/api/v1/medical_document_analysis/'; // Assurez-vous que c'est l'URL correcte de votre backend
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ document_content: documentContent }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+                displayAnalysisResult(result);
+                analysisResultDiv.classList.remove('hidden');
+                showMessage(infoMessageDiv, "Analyse terminée avec succès !", 'info');
+
+            } catch (error) {
+                console.error('Erreur lors de l\'analyse du document:', error);
+                showMessage(errorMessageDiv, `Erreur lors de l'analyse: ${error.message}. Veuillez réessayer.`);
+            } finally {
+                // Cacher le spinner et réactiver le bouton
+                analyzeSpinner.classList.add('hidden');
+                analyzeButton.disabled = false;
+                analyzeButton.innerHTML = 'Analyser le Document';
+            }
+        });
+
+        // Fonction pour afficher les résultats de l'analyse de manière structurée
+        function displayAnalysisResult(data) {
+            let html = '';
+
+            // Résumé Général
+            if (data.resume_general) {
+                html += `<div class="result-item"><div class="result-label">Résumé Général:</div><div class="result-value">${data.resume_general}</div></div>`;
+            }
+            // Type de Document et Date
+            if (data.type_document || data.date_document) {
+                html += `<div class="result-item"><div class="result-label">Document:</div><div class="result-value">${data.type_document || 'Non spécifié'} - Date: ${data.date_document || 'Non spécifiée'}</div></div>`;
+            }
+
+            // Informations Patient
+            if (data.patient_info) {
+                html += `<div class="result-item"><div class="result-label">Informations Patient:</div><div class="result-value">`;
+                if (data.patient_info.nom) html += `<strong>Nom:</strong> ${data.patient_info.nom}<br>`;
+                if (data.patient_info.date_naissance) html += `<strong>Date de Naissance:</strong> ${data.patient_info.date_naissance}<br>`;
+                if (data.patient_info.sexe) html += `<strong>Sexe:</strong> ${data.patient_info.sexe}<br>`;
+                if (data.patient_info.id_patient) html += `<strong>ID Patient:</strong> ${data.patient_info.id_patient}<br>`;
+                html += `</div></div>`;
+            }
+
+            // Résultats Clés
+            if (data.resultats_cles && data.resultats_cles.length > 0) {
+                html += `<div class="result-item"><div class="result-label">Résultats Clés:</div><ul class="result-value">`;
+                data.resultats_cles.forEach(res => {
+                    html += `<li class="result-list-item"><strong>${res.nom}:</strong> ${res.valeur} ${res.unite || ''} `;
+                    if (res.statut) html += `(<span class="${res.statut === 'Élevé' || res.statut === 'Faible' || res.statut === 'Anormal' ? 'text-red-600 font-semibold' : 'text-green-600'}">${res.statut}</span>)`;
+                    if (res.reference_range) html += ` [Réf: ${res.reference_range}]`;
+                    html += `</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            // Diagnostics Identifiés
+            if (data.diagnostics_identifies && data.diagnostics_identifies.length > 0) {
+                html += `<div class="result-item"><div class="result-label">Diagnostics Identifiés:</div><ul class="result-value">`;
+                data.diagnostics_identifies.forEach(diag => {
+                    html += `<li class="result-list-item"><strong>${diag.nom}</strong>`;
+                    if (diag.code_cim_10) html += ` (CIM-10: ${diag.code_cim_10})`;
+                    if (diag.date_diagnostic) html += ` (Date: ${diag.date_diagnostic})`;
+                    html += `</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            // Symptômes Observés
+            if (data.symptomes_observes && data.symptomes_observes.length > 0) {
+                html += `<div class="result-item"><div class="result-label">Symptômes Observés:</div><div class="result-value">${data.symptomes_observes.join(', ')}</div></div>`;
+            }
+
+            // Médicaments Mentionnés
+            if (data.medicaments_mentionnes && data.medicaments_mentionnes.length > 0) {
+                html += `<div class="result-item"><div class="result-label">Médicaments Mentionnés:</div><ul class="result-value">`;
+                data.medicaments_mentionnes.forEach(med => {
+                    html += `<li class="result-list-item"><strong>${med.nom}</strong>`;
+                    if (med.dosage) html += `, Dosage: ${med.dosage}`;
+                    if (med.frequence) html += `, Fréquence: ${med.frequence}`;
+                    if (med.voie_administration) html += `, Voie: ${med.voie_administration}`;
+                    html += `</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            // Recommandations
+            if (data.recommandations && data.recommandations.length > 0) {
+                html += `<div class="result-item"><div class="result-label">Recommandations:</div><ul class="result-value">`;
+                data.recommandations.forEach(rec => {
+                    html += `<li class="result-list-item">${rec.description}`;
+                    if (rec.type_recommandation) html += ` (Type: ${rec.type_recommandation})`;
+                    html += `</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            // Notes Supplémentaires
+            if (data.notes_supplementaires) {
+                html += `<div class="result-item"><div class="result-label">Notes Supplémentaires:</div><div class="result-value">${data.notes_supplementaires}</div></div>`;
+            }
+
+            resultContentDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

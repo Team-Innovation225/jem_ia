@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ultra-envoy-464311-c4",
+  "private_key_id": "8672981f09f3c6f8f01d025c6d1619cda54ab0b9",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC9CmZn5uYWfs9q\nNt+ePiYiZOvckSdUyTpWz3CYMfTSlQUWI9/pOpuWiNy4mXoDj64KkWm+LlXxK7dA\nyzFj7ufNcmZunU1rCsMCHHRGZOvoUpOFwyv3SBL+zUlGMRvp2KjIezRSgw48tkcF\nONDnrm7Ia3PgAmhXEeSzB/IGiVuda95jvNY9geyB/bi2i3FPK5tfTq+3CWdLbwBO\n9g17AUt3amvS6sSkroX6qNJWF/qpw5f/v1GHdBXO7Tbl0tnb3IX+2h1jXQAYsAQX\nGf6hFaFBHuGhVwg4dt2skob2q7vEXYJbA73MTfzXpMUy+gUhW9htfwjMSga42GcZ\n4Mr9DY+TAgMBAAECggEAGsJnHpwbw+FtgO6FlwPbKBE7JfzSIXlerb0thg3ERy7b\nCnhHkN8/+P4kqGjpUam8DDjrTAWJGtuCVESvGCNQYs+n2k6gD9/1HM5kUzakAj32\nLgAjsBxeu/zZO3tmJSMLOV3fWTK+CDARO5cAU1toySwUugf9Nx4MTp94Th6RfmXx\nSv3Bjx2+/SxT00ySec46iTGChp+LXlNreDqS0jAfzJmnUgMoEj7f/sDI33nC14iS\nW9EUD0sKzka/jfOCAyAHwO6dVl0e+4U11co57yJRS6yVoZU2W+v5D3OOz7rjcJTY\nAhy5iPrAbdCc1QzV69KjxlvcgIKox1ol+Zidq7fpyQKBgQDeqLfRUoUhHDNMUx1f\nmeCn0I0YVxgi0AOSehkhQAEHK4g6Ukmegtc1F5VWPNrwlmW+xbJEJ7qJCSRS6Tl+\nJb93Hs8NmXq5atJnyFI+0wMZlsiQQh5kq5kd2QLnqErJAUxtAWofKmQiDnYtLjBP\nrjIiAgz/lmfWR8bPByzwCtSWDQKBgQDZWPkHGfk7WnC9QJ8cpywXMusaJPg/0nXk\nqnK1L01eMDFy4nDpDZZ19SEgh+CdUKvrCuD8ebdzLuEYnnFYqJApJZKhDMoX3DFL\n+nKnSmGpMZWOthhTmn0xyFcguCi7edlaQZmE3eW7T9FG3uiy66fHOaVzFS3Kucit\nvgY/N7f0HwKBgQCbXnneG8n//7CgCsNNaY/FKha6rFOQPzyu4npUpFfTTAIkSDVM\n4ZoQVyOC6LYR+bCHvWYWfu6AHxv0qv/OUcLX+Wyb3cQwTCUD/Fm/svjPy1KqryiM\nMN2IYVzQj7OXrUtKKRmHI8p5pUO7ZSabAz/CUVIGq0pL0QwefLBT1ArhpQKBgAlc\nusViigjTeX29dd0fGlgZemUS6JqfLzLdYLmLQxLmkoq3VFPFoRCNsZKcJ8G/AtjK\nDCzz9UIB5/JOiOVfxW3wT2OekGn8sybpr9yi6JgIKcAO+fdH9VKapZ4kMKT6t7Ea\nmElP4aBy7LnXykBCxGRhiE3vwJw16n4JbG12sfbTAoGBANwp/KiYHS/biyDt5JBh\nz17mxrMPLEJgUlVzmBFjUwxLXbvMtQiD66qCpgfl++XTix8JkWYqhh3MpPYYfIml\nRR7gIWA8Gdv+xzB2ylcjije7MhFd4RCjosj0WqYaKw2QJelea4lSlM30/BGLXdKL\nnhFqOWMlHrd+428SxVxwcA9i\n-----END PRIVATE KEY-----\n",
+  "client_email": "google-speach@ultra-envoy-464311-c4.iam.gserviceaccount.com",
+  "client_id": "112956385755306762768",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/google-speach%40ultra-envoy-464311-c4.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

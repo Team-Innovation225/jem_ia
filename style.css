@@ -1,0 +1,131 @@
+body {
+            /* Ajout de polices spécifiques aux emojis pour le corps général */
+            font-family: 'Inter', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px); /* Ajuste la hauteur pour laisser de la marge */
+        }
+        .chat-header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #e9ecef;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            word-wrap: break-word;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #dcf8c6;
+            color: #333;
+            border-bottom-right-radius: 2px;
+        }
+        .ai-message {
+            align-self: flex-start;
+            background-color: #ffffff;
+            color: #333;
+            border-bottom-left-radius: 2px;
+        }
+        .chat-input-container {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 1rem;
+            outline: none;
+        }
+        .send-button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        .send-button:hover {
+            background-color: #357ABD;
+        }
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #4a90e2;
+            font-style: italic;
+        }
+        .feedback-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .feedback-button {
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            /* MODIFICATIONS ICI: Polices spécifiques aux emojis pour les boutons */
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            font-size: 1.2rem; /* Augmenter la taille pour s'assurer qu'ils sont visibles */
+            line-height: 1; /* Assure que la hauteur de ligne ne coupe pas les emojis */
+            display: flex; /* Utiliser flexbox pour aligner l'emoji et le texte */
+            align-items: center; /* Centrer verticalement */
+            gap: 5px; /* Espacement entre l'emoji et le texte */
+        }
+        /* NOUVELLE RÈGLE CSS pour les emojis à l'intérieur des boutons */
+        .feedback-button .emoji-icon {
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            font-size: 1.2rem; /* Taille spécifique pour l'emoji */
+            line-height: 1; /* Assure que la hauteur de ligne ne coupe pas l'emoji */
+            display: inline-block; /* Assure que l'emoji est traité comme un bloc en ligne */
+        }
+        .feedback-button.like {
+            background-color: #e0ffe0;
+            border-color: #a0d0a0;
+        }
+        .feedback-button.dislike {
+            background-color: #ffe0e0;
+            border-color: #d0a0d0;
+        }
+        .feedback-button:hover {
+            opacity: 0.8;
+        }
+        .feedback-button.selected {
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #4a90e2;
+        }
