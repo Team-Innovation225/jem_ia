@@ -1,4 +1,3 @@
-# app/api/v1/teleassistance.py
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 import logging
@@ -265,4 +264,3 @@ async def websocket_teleassistance_endpoint(
     finally:
         manager.disconnect(session_id)
         logger.info(f"Nettoyage des ressources WebSocket pour la session: {session_id}")
-

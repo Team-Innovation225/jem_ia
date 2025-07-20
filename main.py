@@ -9,8 +9,6 @@ import os
 
 from app.base_de_donnees.connexion import init_db
 from app.configuration.parametres import parametres
-from app.services.gestionnaire_authentification import GestionnaireAuthentification
-from app.base_de_donnees.modeles import UserEnDB
 
 # Importation des fonctions d'initialisation depuis injection.py
 from app.dependances.injection import (
@@ -18,7 +16,6 @@ from app.dependances.injection import (
     init_gestionnaire_connaissances_instance,
     init_gestionnaire_contexte_instance,
     init_gestionnaire_vocal_instance,
-    init_gestionnaire_authentification_instance,
     init_moteur_diagnostic_instance,
     init_gestionnaire_patient_instance,
     init_gestionnaire_medecin_instance,
@@ -30,7 +27,6 @@ from app.dependances.injection import (
 
 # Importation des routeurs d'API
 from app.api.v1 import (
-    authentification_router,
     points_terminaux_router,
     teleassistance_router,
     patient_router,
@@ -77,13 +73,15 @@ app.add_middleware(
     allow_headers=["*", "Authorization"],
 )
 
-# Créer les répertoires "templates" et "static" si non existants.
-if not os.path.exists("templates"):
-    os.makedirs("templates")
+# Créer les répertoires "static", "uploads" et "audio_reponses" si non existants.
 if not os.path.exists("static"):
     os.makedirs("static")
+if not os.path.exists("uploads"): # Assurez-vous que le dossier pour les uploads audio existe
+    os.makedirs("uploads")
+if not os.path.exists("audio_reponses"): # Assurez-vous que le dossier pour les réponses audio existe
+    os.makedirs("audio_reponses")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=".")
 
 # Montage des fichiers statiques (CSS, JS, Images)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -98,7 +96,6 @@ async def startup_event():
     await init_gestionnaire_contexte_instance()
     await init_gestionnaire_vocal_instance()
     await init_moteur_diagnostic_instance() 
-    await init_gestionnaire_authentification_instance() 
     await init_gestionnaire_patient_instance() 
     await init_gestionnaire_medecin_instance() 
     await init_gestionnaire_structure_medicale_instance() 
@@ -108,42 +105,20 @@ async def startup_event():
     logger.info("Tous les services ont été initialisés.")
 # --- FIN DE LA FONCTION D'INITIALISATION ---
 
-# --- DÉPENDANCE POUR PROTÉGER LES ROUTES DU TABLEAU DE BORD ---
-# Cette dépendance s'assure que seul un utilisateur authentifié peut accéder à la page.
-async def get_current_active_user_for_dashboard(
-    current_user: UserEnDB = Depends(GestionnaireAuthentification.get_current_active_user)
-) -> UserEnDB:
-    """
-    Dépendance pour obtenir l'utilisateur actif et protéger la route du tableau de bord.
-    """
-    return current_user
-
 # --- DÉFINITION DES ROUTES HTML ---
 
-# Route racine pour servir la page de connexion (login.html)
-@app.get("/", response_class=HTMLResponse, summary="Page de connexion")
-async def read_login_root(request: Request):
+# Route racine pour servir le tableau de bord (dashboard.html) directement
+@app.get("/", response_class=HTMLResponse, summary="Tableau de bord de l'application")
+async def read_dashboard_root(request: Request):
     """
-    Sert la page de connexion de l'application (login.html).
+    Sert la page du tableau de bord de l'application (dashboard.html) directement.
+    Aucune authentification n'est requise pour cette route.
     """
-    return templates.TemplateResponse("login.html", {"request": request})
-
-# Route pour servir le tableau de bord (dashboard.html), protégée par authentification
-@app.get("/dashboard", response_class=HTMLResponse, summary="Tableau de bord de l'application")
-async def read_dashboard(
-    request: Request,
-    current_user: UserEnDB = Depends(get_current_active_user_for_dashboard) # Protection de la route
-):
-    """
-    Sert la page du tableau de bord de l'application (dashboard.html).
-    Requiert une authentification.
-    """
-    # Si l'utilisateur est authentifié, il peut accéder au tableau de bord
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
+    # Le fichier dashboard.html est maintenant recherché directement à la racine du répertoire de l'application.
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
 # Enregistrement des routeurs d'API
-app.include_router(authentification_router, prefix="/api/v1/auth", tags=["Authentification"])
 app.include_router(points_terminaux_router, prefix="/api/v1/core", tags=["Core IA & Connaissances"])
 app.include_router(teleassistance_router, prefix="/api/v1/teleassistance", tags=["Téléassistance"])
 app.include_router(patient_router, prefix="/api/v1/patients", tags=["Gestion Patients"])
@@ -152,13 +127,6 @@ app.include_router(structure_medicale_router, prefix="/api/v1/structures", tags=
 app.include_router(rendez_vous_router, prefix="/api/v1/appointments", tags=["Rendez-vous"])
 app.include_router(telemedecine_router_v2, prefix="/api/v1/telemedecine", tags=["Télémedecine V2"])
 app.include_router(geolocalisation_router, prefix="/api/v1/geolocation", tags=["Géolocalisation"])
-
-@app.get("/api/v1/protected-test", summary="Test de route protégée")
-async def protected_test(current_user: UserEnDB = Depends(GestionnaireAuthentification.get_current_active_user)):
-    """
-    Une route de test qui nécessite une authentification via Firebase ID Token.
-    """
-    return {"message": f"Accès autorisé pour l'utilisateur: {current_user.email} avec le rôle: {current_user.role}", "firebase_uid": current_user.firebase_uid}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

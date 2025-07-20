@@ -1,4 +1,3 @@
-# app/services/gestionnaire_contexte.py
 import logging
 import json
 from typing import List, Optional, Dict, Any
@@ -6,7 +5,7 @@ from datetime import datetime
 
 from app.base_de_donnees.connexion import get_db_connection
 from app.base_de_donnees import crud
-from app.base_de_donnees.modeles import ContexteConversationBase, ContexteConversationEnDB, LogConversationCreer, LogConversationEnDB # <-- CORRIGÉ ICI
+from app.base_de_donnees.modeles import ContexteConversationBase, ContexteConversationEnDB, LogConversationCreer, LogConversationEnDB
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class GestionnaireContexte:
         message: str,
         type_message: str = 'message_utilisateur', # 'message_utilisateur', 'reponse_ia', 'evenement_systeme'
         donnees_structurees: Optional[Dict[str, Any]] = None
-    ) -> LogConversationEnDB: # <-- CORRIGÉ ICI
+    ) -> LogConversationEnDB:
         """
         Enregistre un log de conversation dans la base de données.
         Crée ou met à jour le contexte de conversation associé.
@@ -37,10 +36,10 @@ class GestionnaireContexte:
             # Convertir les données structurées en JSON string si elles existent
             donnees_structurees_json = json.dumps(donnees_structurees) if donnees_structurees else None
 
-            log_creer = LogConversationCreer( # <-- CORRIGÉ ICI
+            log_creer = LogConversationCreer(
                 id_session=id_session,
                 role=role,
-                message=message,
+                message=message, # Utilise le champ 'message' du modèle
                 type_message=type_message,
                 donnees_structurees=donnees_structurees_json
             )
@@ -58,7 +57,7 @@ class GestionnaireContexte:
             for entry in historique_complet[-10:]: # Garder les 10 derniers messages
                 historique_pour_contexte.append({
                     "role": entry.role,
-                    "message": entry.message
+                    "message": entry.message # Utilise le champ 'message' du modèle LogConversationEnDB
                 })
             
             contexte_json = json.dumps(historique_pour_contexte, ensure_ascii=False)
@@ -78,7 +77,7 @@ class GestionnaireContexte:
             if conn:
                 conn.close()
 
-    async def obtenir_historique_conversation(self, id_session: str) -> List[LogConversationEnDB]: # <-- CORRIGÉ ICI
+    async def obtenir_historique_conversation(self, id_session: str) -> List[LogConversationEnDB]:
         """
         Récupère l'historique complet des logs de conversation pour une session donnée.
         """
@@ -136,4 +135,3 @@ class GestionnaireContexte:
             reponse = "Je suis un assistant médical virtuel. Je peux vous fournir des informations sur les maladies et les symptômes, ou vous aider à trouver des professionnels de santé. Comment puis-je vous assister ?"
         
         return reponse
-

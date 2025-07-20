@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord - Télémédecine IA</title>
+    <!-- Utilisation de Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styles pour le scrollbar */
+        #chatMessages::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chatMessages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        #chatMessages::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        
+        /* Styles de l'interface de chat importés */
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            word-wrap: break-word;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #dcf8c6;
+            color: #333;
+            border-bottom-right-radius: 2px;
+        }
+        .ai-message {
+            align-self: flex-start;
+            background-color: #ffffff;
+            color: #333;
+            border-bottom-left-radius: 2px;
+        }
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #4a90e2;
+            font-style: italic;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-indicator.active {
+            display: flex;
+        }
+        .ai-thinking-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 10px;
+            height: 1em;
+        }
+        .ai-thinking-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #4a90e2;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: speak-pulse 1.4s infinite ease-in-out;
+        }
+        .ai-thinking-indicator span:nth-child(1) { animation-delay: 0s; }
+        .ai-thinking-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .ai-thinking-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes speak-pulse {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .audio-player-container {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .audio-player-container button {
+            background-color: #e0e0e0;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .mic-button-chat.recording { /* Utilise mic-button-chat pour le mode chat */
+            background-color: #dc3545; /* Rouge quand ça enregistre */
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Styles pour les messages de notification */
+        .notification-message {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .notification-message.success {
+            background-color: #4CAF50; /* Vert */
+            color: white;
+        }
+        .notification-message.error {
+            background-color: #F44336; /* Rouge */
+            color: white;
+        }
+        .notification-message.info {
+            background-color: #2196F3; /* Bleu */
+            color: white;
+        }
+
+        /* NOUVEAUX STYLES POUR L'INTERFACE D'APPEL */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* S'adapte à la hauteur du parent */
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header {
+            background-color: #1e40af; /* Bleu foncé */
+            color: white;
+            padding: 1rem;
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-align: center;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: #f8fafc; /* Gris très clair */
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chat-input-container {
+            display: flex;
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0; /* Gris clair */
+            background-color: #fff;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e1; /* Gris */
+            border-radius: 0.375rem;
+            font-size: 1rem;
+        }
+
+        .send-button, .mic-button-chat { /* mic-button-chat pour distinguer du mic-button global si nécessaire */
+            background-color: #2563eb; /* Bleu */
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        .send-button:hover, .mic-button-chat:hover {
+            background-color: #1d4ed8; /* Bleu plus foncé */
+        }
+
+        .recording-indicator {
+            display: none;
+            text-align: center;
+            padding: 0.5rem;
+            color: #ef4444; /* Rouge */
+            font-style: italic;
+            font-weight: 600;
+        }
+        .recording-indicator.active {
+            display: block;
+        }
+
+        /* Styles pour l'interface d'appel */
+        .call-interface {
+            display: none; /* Caché par défaut */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background-color: #e0f2fe; /* Bleu très clair */
+            border-radius: 0.5rem;
+            height: 100%;
+            gap: 1.5rem;
+        }
+        .call-interface.active {
+            display: flex;
+        }
+
+        .call-message-display {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e40af;
+            text-align: center;
+            min-height: 3rem; /* Pour éviter les sauts de contenu */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .push-to-talk-button {
+            background-color: #ef4444; /* Rouge */
+            color: white;
+            padding: 1.5rem 2.5rem;
+            border-radius: 9999px; /* Cercle */
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+        .push-to-talk-button:hover {
+            background-color: #dc2626; /* Rouge plus foncé */
+            transform: scale(1.02);
+        }
+        .push-to-talk-button.recording {
+            background-color: #b91c1c; /* Rouge encore plus foncé */
+            animation: pulse-ptt 1.5s infinite;
+        }
+        @keyframes pulse-ptt {
+            0% { transform: scale(1); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); }
+            50% { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); }
+            100% { transform: scale(1); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); }
+        }
+
+        .ai-speaking-waveform {
+            display: none; /* Caché par défaut */
+            align-items: flex-end;
+            height: 30px;
+            gap: 3px;
+        }
+        .ai-speaking-waveform.active {
+            display: flex;
+        }
+        .ai-speaking-waveform span {
+            width: 5px;
+            height: 5px;
+            background-color: #2563eb; /* Bleu */
+            animation: waveform 1.2s ease-in-out infinite;
+            border-radius: 2px;
+        }
+        .ai-speaking-waveform span:nth-child(1) { animation-delay: 0s; }
+        .ai-speaking-waveform span:nth-child(2) { animation-delay: 0.15s; }
+        .ai-speaking-waveform span:nth-child(3) { animation-delay: 0.3s; }
+        .ai-speaking-waveform span:nth-child(4) { animation-delay: 0.45s; }
+        .ai-speaking-waveform span:nth-child(5) { animation-delay: 0.6s; }
+
+        @keyframes waveform {
+            0%, 100% { height: 5px; }
+            50% { height: 25px; }
+        }
+
+        .teleassistance-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f0f9ff; /* Bleu très très clair */
+            border-top: 1px solid #e2e8f0;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        .call-button, .hangup-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .call-button {
+            background-color: #22c55e; /* Vert */
+            color: white;
+        }
+        .call-button:hover {
+            background-color: #16a34a; /* Vert plus foncé */
+        }
+
+        .hangup-button {
+            background-color: #ef4444; /* Rouge */
+            color: white;
+            display: none; /* Caché par défaut */
+        }
+        .hangup-button:hover {
+            background-color: #dc2626; /* Rouge plus foncé */
+        }
+
+        .call-status {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #334155; /* Gris ardoise */
+            display: none; /* Caché par défaut */
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .call-status.active {
+            display: flex;
+        }
+        .call-status.recording-active::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #ef4444; /* Rouge pour l'enregistrement */
+            border-radius: 50%;
+            animation: pulse-status 1.5s infinite;
+        }
+        @keyframes pulse-status {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.7; }
+        }
+
+        /* Feedback buttons */
+        .feedback-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: flex-end; /* Aligner à droite sous les messages de l'IA */
+        }
+        .feedback-button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+        }
+        .feedback-button:hover {
+            background-color: #e0e0e0;
+        }
+        .feedback-button.selected {
+            background-color: #d1e7dd; /* Vert clair pour sélectionné */
+            border-color: #28a745;
+        }
+        .feedback-button.dislike.selected {
+            background-color: #f8d7da; /* Rouge clair pour sélectionné */
+            border-color: #dc3545;
+        }
+        .feedback-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .emoji-icon {
+            font-size: 1.2em;
+        }
+
+        /* Masquer le texte de la bulle en mode appel pour les messages IA */
+        .call-mode-hidden-text .message-content {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar de navigation -->
+        <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
+            <div class="h-16 flex items-center justify-center border-b border-gray-200">
+                <h1 class="text-xl font-bold text-blue-600">Télémédecine IA</h1>
+            </div>
+            <nav class="flex-1 px-4 py-4 space-y-2">
+                <a href="#" id="nav-diagnostic" class="flex items-center px-4 py-2 text-gray-700 bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    Diagnostic IA
+                </a>
+                <a href="#" id="nav-knowledge" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-9-5.747h18" /></svg>
+                    Base de Connaissances
+                </a>
+                 <a href="/api/docs" target="_blank" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    API Docs
+                </a>
+                <!-- Le bouton de déconnexion est supprimé car l'authentification est désactivée -->
+            </nav>
+        </aside>
+
+        <!-- Contenu principal -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            
+            <!-- SECTION: Diagnostic IA -->
+            <div id="content-diagnostic">
+                <h2 class="text-2xl font-bold mb-4">Assistant de Diagnostic IA</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Colonne de Chat/Appel -->
+                    <div class="lg:col-span-2 bg-white p-4 rounded-lg shadow h-[75vh] flex flex-col">
+                        <div class="chat-header">
+                            Assistant Médical IA
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Les messages seront ajoutés ici par JavaScript -->
+                            <div class="message-bubble ai-message">
+                                <span class="message-content">Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd'hui ?</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Interface d'appel (initialement cachée) -->
+                        <div class="call-interface" id="callInterface">
+                            <div class="call-message-display" id="callMessageDisplay">
+                                Appel démarré. Appuyez et maintenez le bouton pour parler.
+                            </div>
+                            <button id="pushToTalkButton" class="push-to-talk-button">
+                                Parler
+                            </button>
+                            <div class="ai-speaking-waveform" id="aiSpeakingWaveform">
+                                <span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <!-- Indicateur de chargement/réflexion de l'IA pour le mode CHAT/APPEL -->
+                        <div class="loading-indicator" id="chatLoadingIndicator">
+                            L'IA réfléchit...
+                            <div class="ai-thinking-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                        <!-- Indicateur d'enregistrement vocal pour le mode CHAT -->
+                        <div class="recording-indicator" id="chatRecordingIndicator">
+                            Enregistrement en cours...
+                        </div>
+
+                        <!-- Section des contrôles de téléassistance (pour démarrer/raccrocher l'appel) -->
+                        <div class="teleassistance-controls">
+                            <button id="callButton" class="call-button">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                    <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 0 1-.606 1.907L6.75 11.25a11.25 11.25 0 0 0 11.25 11.25l1.44-1.793a1.875 1.875 0 0 1 1.907-.606l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 0 1-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5Z" clip-rule="evenodd" />
+                                </svg>
+                                Démarrer l'appel
+                            </button>
+                            <button id="hangupButton" class="hangup-button">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                    <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 0 1-.606 1.907L6.75 11.25a11.25 11.25 0 0 0 11.25 11.25l1.44-1.793a1.875 1.875 0 0 1 1.907-.606l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 0 1-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5Z" clip-rule="evenodd" />
+                                    <path fill-rule="evenodd" d="M12 2.25c-5.405 0-10.807 1.39-15 3.99l1.5 1.5c3.6-2.25 7.6-3.39 10.5-3.39 2.9 0 6.9 1.14 10.5 3.39l1.5-1.5c-4.193-2.6-9.595-3.99-15-3.99Z" clip-rule="evenodd" />
+                                </svg>
+                                Raccrocher
+                            </button>
+                            <span id="callStatus" class="call-status"></span>
+                        </div>
+
+                        <!-- Conteneur d'entrée de chat (visible par défaut, masqué en mode appel) -->
+                        <div class="chat-input-container" id="chatInputContainer">
+                            <input type="text" id="chatInput" class="chat-input" placeholder="Écrivez votre message...">
+                            <button id="micButton" class="mic-button-chat">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                                    <path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" />
+                                    <path d="M12 2.25c-2.485 0-4.5 2.015-4.5 4.5v.75c0 2.485 2.015 4.5 4.5 4.5s4.5-2.015 4.5-4.5V6.75c0-2.485-2.015-4.5-4.5-4.5ZM12 15a5.25 5.25 0 0 1-5.25-5.25v-.75a.75.75 0 0 0-1.5 0v.75a6.75 6.75 0 0 0 13.5 0v-.75a.75.75 0 0 0-1.5 0v.75A5.25 5.25 0 0 1 12 15Z" />
+                                    <path d="M6.75 19.5a.75.75 0 0 0 1.5 0v-2.25a.75.75 0 0 0-1.5 0v2.25Z" />
+                                    <path d="M17.25 19.5a.75.75 0 0 0 1.5 0v-2.25a.75.75 0 0 0-1.5 0v2.25Z" />
+                                </svg>
+                            </button>
+                            <button id="sendButton" class="send-button">Envoyer</button>
+                        </div>
+                    </div>
+                    <!-- Colonne d'historique -->
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2">Historique de Session</h3>
+                        <div class="flex items-center mb-4">
+                             <input type="text" id="history-session-id" placeholder="ID de session" class="flex-1 p-2 border border-gray-300 rounded-md">
+                             <button id="history-fetch-btn" class="ml-2 bg-gray-200 p-2 rounded-md hover:bg-gray-300">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 20v-5h-5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8h.5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12a8 8 0 01-8 8h-.5" /></svg>
+                             </button>
+                        </div>
+                        <div id="conversation-history-list" class="space-y-2 text-sm text-gray-600 overflow-y-auto h-[60vh]">
+                            <!-- L'historique sera chargé ici -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Base de Connaissances -->
+            <div id="content-knowledge" class="hidden">
+                <h2 class="text-2xl font-bold mb-4">Gestion de la Base de Connaissances</h2>
+                 <div class="p-4 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50" role="alert">
+                  <span class="font-medium">Accès restreint:</span> La modification de ces données est réservée aux utilisateurs avec le rôle 'admin' ou 'medecin'.
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Gestion des Maladies -->
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <h3 class="text-lg font-bold">Gérer les Maladies</h3>
+                        <form id="form-add-maladie">
+                            <h4 class="font-semibold">Ajouter une maladie</h4>
+                            <input type="text" name="nom_fr" placeholder="Nom (FR)" class="w-full p-2 mt-1 border rounded" required>
+                            <textarea name="description_fr" placeholder="Description (FR)" class="w-full p-2 mt-2 border rounded" required></textarea>
+                            <button type="submit" class="w-full mt-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Ajouter</button>
+                        </form>
+                        <hr>
+                        <form id="form-update-maladie">
+                             <h4 class="font-semibold">Rechercher / Mettre à jour</h4>
+                             <input type="text" name="search_nom" placeholder="Rechercher par nom..." class="w-full p-2 mt-1 border rounded">
+                             <input type="number" name="maladie_id" placeholder="ID de la maladie à màj" class="w-full p-2 mt-2 border rounded">
+                             <textarea name="description_fr_update" placeholder="Nouvelle description" class="w-full p-2 mt-2 border rounded"></textarea>
+                             <button type="submit" class="w-full mt-2 bg-green-600 text-white p-2 rounded hover:bg-green-700">Mettre à Jour</button>
+                        </form>
+                    </div>
+
+                    <!-- Gestion des Symptômes -->
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <h3 class="text-lg font-bold">Gérer les Symptômes</h3>
+                        <form id="form-add-symptome">
+                            <h4 class="font-semibold">Ajouter un symptôme</h4>
+                            <input type="text" name="nom_fr" placeholder="Nom (FR)" class="w-full p-2 mt-1 border rounded" required>
+                            <textarea name="description_fr" placeholder="Description (FR)" class="w-full p-2 mt-2 border rounded" required></textarea>
+                            <button type="submit" class="w-full mt-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Ajouter</button>
+                        </form>
+                        <hr>
+                        <form id="form-update-symptome">
+                             <h4 class="font-semibold">Mettre à jour un symptôme</h4>
+                             <input type="number" name="symptome_id" placeholder="ID du symptôme à màj" class="w-full p-2 mt-1 border rounded" required>
+                             <textarea name="description_fr_update" placeholder="Nouvelle description" class="w-full p-2 mt-2 border rounded"></textarea>
+                             <button type="submit" class="w-full mt-2 bg-green-600 text-white p-2 rounded hover:bg-green-700">Mettre à Jour</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Lier Maladie et Symptôme -->
+                <div class="bg-white p-6 rounded-lg shadow mt-6">
+                    <h3 class="text-lg font-bold">Lier Maladie et Symptôme</h3>
+                    <form id="form-link-maladie-symptome" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <input type="number" name="maladie_id" placeholder="ID Maladie" class="w-full p-2 border rounded" required>
+                        <input type="number" name="symptome_id" placeholder="ID Symptôme" class="w-full p-2 border rounded" required>
+                        <input type="number" step="0.1" name="force_lien" placeholder="Force du lien (ex: 0.8)" class="w-full p-2 border rounded" required>
+                        <button type="submit" class="md:col-span-3 w-full mt-2 bg-purple-600 text-white p-2 rounded hover:bg-purple-700">Créer le Lien</button>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Fonction utilitaire pour afficher des notifications
+        function showNotification(message, type = 'info', duration = 5000) {
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = `notification-message ${type}`;
+            notificationDiv.textContent = message;
+            document.body.appendChild(notificationDiv);
+            setTimeout(() => notificationDiv.remove(), duration);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- VARIABLES GLOBALES ---
+            const API_BASE_URL = '/api/v1/core';
+            let sessionId = null; // Sera généré par le backend
+            
+            // Éléments du CHAT
+            const chatInput = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            const micButtonChat = document.getElementById('micButton'); // Renommé pour éviter conflit
+            const chatMessages = document.getElementById('chatMessages');
+            const chatLoadingIndicator = document.getElementById('chatLoadingIndicator');
+            const chatRecordingIndicator = document.getElementById('chatRecordingIndicator');
+            const aiThinkingIndicator = document.querySelector('.ai-thinking-indicator'); 
+
+            let mediaRecorderChat; // Pour le chat vocal (message unique)
+            let audioChunksChat = [];
+            let isRecordingChat = false; // Pour le mode chat vocal (message unique)
+
+            // Éléments de l'APPEL
+            const callButton = document.getElementById('callButton');
+            const hangupButton = document.getElementById('hangupButton');
+            const callStatus = document.getElementById('callStatus');
+            const chatInputContainer = document.getElementById('chatInputContainer'); 
+            const callInterface = document.getElementById('callInterface'); 
+            const pushToTalkButton = document.getElementById('pushToTalkButton');
+            const aiSpeakingWaveform = document.getElementById('aiSpeakingWaveform'); 
+            const callMessageDisplay = document.getElementById('callMessageDisplay'); 
+
+            let callWebSocket;
+            let isCallActive = false;
+            let callMediaRecorder; // Pour l'appel continu (Push-to-Talk)
+            let callAudioStream;
+            let currentAudioPlayer = null; // Gère la lecture audio de l'IA
+
+            // Fonction pour générer un ID de session unique (UUID v4)
+            function generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+            
+            // --- Initialisation de la session au chargement de la page ---
+            try {
+                const response = await fetch(`${API_BASE_URL}/new_session`, {
+                    method: 'GET',
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP lors de la génération de session: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                console.log("ID de session généré par le backend:", sessionId);
+                showNotification("Session de chat prête !", "success");
+
+            } catch (error) {
+                console.error("Erreur lors de la génération de l'ID de session:", error);
+                showNotification("Impossible de démarrer la session de chat. Veuillez réessayer.", "error");
+            }
+
+
+            // --- GESTION DE LA NAVIGATION ---
+            const navDiagnostic = document.getElementById('nav-diagnostic');
+            const navKnowledge = document.getElementById('nav-knowledge');
+            const contentDiagnostic = document.getElementById('content-diagnostic');
+            const contentKnowledge = document.getElementById('content-knowledge');
+
+            function showDiagnostic() {
+                contentDiagnostic.classList.remove('hidden');
+                contentKnowledge.classList.add('hidden');
+                navDiagnostic.classList.add('bg-gray-200');
+                navKnowledge.classList.remove('bg-gray-200');
+            }
+
+            function showKnowledge() {
+                contentDiagnostic.classList.add('hidden');
+                contentKnowledge.classList.remove('hidden');
+                navDiagnostic.classList.remove('bg-gray-200');
+                navKnowledge.classList.add('bg-gray-200');
+            }
+
+            navDiagnostic.addEventListener('click', (e) => { e.preventDefault(); showDiagnostic(); });
+            navKnowledge.addEventListener('click', (e) => { e.preventDefault(); showKnowledge(); });
+            
+            // --- LOGIQUE DU CHAT ET DE L'APPEL ---
+
+            // Fonction pour ajouter un message à l'interface
+            function addMessage(message, sender, messageId = null, audioPath = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message-bubble');
+                messageDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+                
+                // Si c'est un message de l'IA en mode appel, le texte est masqué dans la bulle
+                if (sender === 'ai' && isCallActive) {
+                    messageDiv.classList.add('call-mode-hidden-text');
+                    // Afficher le texte dans le callMessageDisplay pour le feedback utilisateur
+                    callMessageDisplay.textContent = message;
+                } else {
+                    // Pour les messages utilisateur ou les messages IA en mode chat, afficher le texte normalement
+                    messageDiv.innerHTML = `<span class="message-content">${message}</span>`;
+                }
+
+                if (audioPath && sender === 'ai') {
+                    const audioPlayerContainer = document.createElement('div');
+                    audioPlayerContainer.classList.add('audio-player-container');
+
+                    const playButton = document.createElement('button');
+                    playButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643L18.75 12l-11.47 7.99C6.029 20.333 4.5 19.426 4.5 18.003V5.653Z" clip-rule="evenodd" />
+                        </svg>
+                    `;
+                    playButton.title = "Écouter la réponse";
+
+                    const audio = new Audio(audioPath);
+                    currentAudioPlayer = audio; // Mettre à jour le lecteur audio courant
+
+                    audio.onplay = () => {
+                        playButton.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                                <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0a.75.75 0 0 1 .75-.75H16.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75V5.25Z" clip-rule="evenodd" />
+                            </svg>
+                        `; // Icône Pause
+                        // Afficher l'animation de parole de l'IA quand l'audio joue
+                        aiSpeakingWaveform.classList.add('active'); // NOUVEAU: Activer l'animation de la forme d'onde
+                        chatLoadingIndicator.classList.remove('active'); // Cacher l'indicateur de réflexion du chat
+                        aiThinkingIndicator.style.display = 'none'; // Cacher les points de réflexion du chat
+                        callStatus.classList.remove('recording-active'); // Cacher l'animation du micro de l'appel
+                        pushToTalkButton.textContent = "Écoute..."; // Mettre à jour le texte du bouton PTT
+                    };
+
+                    audio.onpause = audio.onended = () => {
+                        playButton.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                                <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643L18.75 12l-11.47 7.99C6.029 20.333 4.5 19.426 4.5 18.003V5.653Z" clip-rule="evenodd" />
+                            </svg>
+                        `; // Icône Play
+                        // Cacher l'animation de parole de l'IA quand l'audio est en pause ou terminé
+                        aiSpeakingWaveform.classList.remove('active'); // NOUVEAU: Désactiver l'animation de la forme d'onde
+                        // Si l'appel est toujours actif, revenir à l'état "En appel..."
+                        if (isCallActive) {
+                            callStatus.textContent = "En appel...";
+                            callStatus.classList.add('recording-active'); // Réactiver l'animation du micro
+                            pushToTalkButton.textContent = "Parler"; // Réinitialiser le texte du bouton PTT
+                        }
+                    };
+
+                    playButton.addEventListener('click', () => {
+                        if (audio.paused) {
+                            audio.play().catch(e => console.error("Erreur de lecture audio:", e));
+                        } else {
+                            audio.pause();
+                        }
+                    });
+
+                    audioPlayerContainer.appendChild(playButton);
+                    messageDiv.appendChild(audioPlayerContainer);
+                    
+                    // Lancer la lecture audio automatiquement
+                    audio.play().catch(e => console.error("Erreur de lecture audio automatique:", e));
+                }
+
+                chatMessages.appendChild(messageDiv);
+
+                // Ajouter les boutons de feedback pour les messages de l'IA (seulement en mode chat)
+                if (sender === 'ai' && messageId !== null && !isCallActive) {
+                    const feedbackContainer = document.createElement('div');
+                    feedbackContainer.classList.add('feedback-buttons');
+                    feedbackContainer.dataset.messageId = messageId;
+
+                    const likeButton = document.createElement('button');
+                    likeButton.classList.add('feedback-button', 'like');
+                    likeButton.innerHTML = '<span class="emoji-icon">👍</span> Utile';
+                    likeButton.onclick = () => sendFeedback(messageId, 1, feedbackContainer);
+
+                    const dislikeButton = document.createElement('button');
+                    dislikeButton.classList.add('feedback-button', 'dislike');
+                    dislikeButton.innerHTML = '<span class="emoji-icon">👎</span> Pas utile';
+                    dislikeButton.onclick = () => sendFeedback(messageId, 0, feedbackContainer);
+
+                    feedbackContainer.appendChild(likeButton);
+                    feedbackContainer.appendChild(dislikeButton);
+                    messageDiv.appendChild(feedbackContainer);
+                }
+
+                // Faire défiler vers le bas pour voir le dernier message
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Fonction pour envoyer le feedback au backend
+            async function sendFeedback(messageId, feedbackValue, feedbackContainer) {
+                Array.from(feedbackContainer.children).forEach(button => {
+                    button.disabled = true;
+                    button.classList.remove('selected');
+                });
+
+                const selectedButton = feedbackValue === 1 ? feedbackContainer.querySelector('.like') : feedbackContainer.querySelector('.dislike');
+                selectedButton.classList.add('selected');
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/feedback/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message_id: messageId,
+                            feedback_value: feedbackValue,
+                            id_session: sessionId
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Erreur lors de l\'envoi du feedback:', errorData.detail);
+                        Array.from(feedbackContainer.children).forEach(button => button.disabled = false);
+                        selectedButton.classList.remove('selected');
+                        showNotification(`Erreur lors de l'envoi du feedback: ${errorData.detail}`, "error");
+                    } else {
+                        console.log('Feedback envoyé avec succès pour le message ID DB:', messageId, 'Valeur:', feedbackValue);
+                        const confirmation = document.createElement('span');
+                        confirmation.textContent = ' Merci pour votre feedback !';
+                        confirmation.style.marginLeft = '10px';
+                        confirmation.style.color = '#4a90e2';
+                        feedbackContainer.appendChild(confirmation);
+                        showNotification("Feedback envoyé avec succès !", "success");
+                    }
+                } catch (error) {
+                    console.error('Erreur réseau lors de l\'envoi du feedback:', error);
+                    Array.from(feedbackContainer.children).forEach(button => button.disabled = false);
+                    selectedButton.classList.remove('selected');
+                    showNotification(`Erreur réseau lors de l'envoi du feedback: ${error.message}`, "error");
+                }
+            }
+
+            // NOUVELLE FONCTION: Envoie la requête de chat (texte ou audio) au backend
+            async function sendChatRequest(textMessage, audioBlob) {
+                if (!sessionId) {
+                    showNotification("Erreur: ID de session non disponible. Veuillez recharger la page.", "error");
+                    return;
+                }
+
+                const formData = new FormData();
+                let isContentProvided = false;
+
+                if (textMessage && textMessage.trim() !== '') {
+                    formData.append('message_utilisateur', textMessage.trim());
+                    isContentProvided = true;
+                    addMessage(textMessage.trim(), 'user'); // Add user message to UI immediately
+                } else if (audioBlob && audioBlob.size > 0) {
+                    formData.append('audio_file', audioBlob, 'recording.webm');
+                    isContentProvided = true;
+                    addMessage("[Message vocal envoyé]", 'user'); // Indicate voice message in UI
+                }
+
+                if (!isContentProvided) {
+                    showNotification("Veuillez entrer un message texte ou enregistrer un message vocal.", "info");
+                    return; // Prevent sending empty request
+                }
+                
+                chatInput.value = ''; // Clear text input
+                chatLoadingIndicator.classList.add('active');
+                aiThinkingIndicator.style.display = 'inline-flex';
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/chat/?id_session=${sessionId}`, {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const audioUrl = data.chemin_audio_reponse_ia ? `/api/v1/core/audio_response/${data.chemin_audio_reponse_ia.split('/').pop()}` : null;
+                    addMessage(data.reponse_ia, 'ai', data.ai_message_db_id, audioUrl);
+
+                } catch (error) {
+                    console.error("Erreur lors de l'appel à l'API chat:", error);
+                    showNotification(`Désolé, une erreur est survenue: ${error.message}`, "error");
+                } finally {
+                    chatLoadingIndicator.classList.remove('active');
+                    aiThinkingIndicator.style.display = 'none';
+                }
+            }
+
+
+            // Gérer l'envoi du formulaire (texte)
+            document.getElementById('chat-form').addEventListener('submit', async (e) => { // Using the form ID
+                e.preventDefault();
+                const userMessage = chatInput.value.trim();
+                await sendChatRequest(userMessage, null); // Send text message
+            });
+
+            // Gérer l'enregistrement audio
+            micButtonChat.addEventListener('click', async () => {
+                if (!isRecordingChat) { 
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        mediaRecorderChat = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+                        audioChunksChat = [];
+                        mediaRecorderChat.ondataavailable = event => {
+                            audioChunksChat.push(event.data);
+                        };
+
+                        mediaRecorderChat.onstop = async () => {
+                            stream.getTracks().forEach(track => track.stop());
+                            const audioBlob = new Blob(audioChunksChat, { type: 'audio/webm' });
+                            
+                            // Call the unified send function with the audio blob
+                            await sendChatRequest(null, audioBlob); 
+
+                            isRecordingChat = false; 
+                            micButtonChat.classList.remove('recording');
+                            chatRecordingIndicator.classList.remove('active');
+                            chatInput.disabled = false;
+                            sendButton.disabled = false;
+                            callButton.disabled = false;
+                        };
+
+                        mediaRecorderChat.start();
+                        isRecordingChat = true; 
+                        micButtonChat.classList.add('recording');
+                        chatRecordingIndicator.classList.add('active'); 
+                        chatInput.disabled = true;
+                        sendButton.disabled = true;
+                        callButton.disabled = true; 
+                    } catch (err) {
+                        console.error('Erreur d\'accès au microphone ou de MediaRecorder:', err);
+                        showNotification("Impossible d'accéder au microphone. Veuillez vérifier les permissions de votre navigateur.", 'error');
+                    }
+                } else {
+                    mediaRecorderChat.stop(); // Arrête l'enregistrement
+                }
+            });
+
+
+            // --- Logique de téléassistance (appel en temps réel) ---
+            callButton.addEventListener('click', startCall);
+            hangupButton.addEventListener('click', stopCall);
+
+            async function startCall() {
+                if (isCallActive) return;
+
+                if (!sessionId) {
+                    sessionId = generateUUID();
+                    console.log('Nouvelle session d\'appel démarrée avec ID:', sessionId);
+                    showNotification("Nouvelle session d'appel démarrée.", "info");
+                }
+
+                try {
+                    callAudioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            sampleRate: 48000,
+                            channelCount: 1
+                        }
+                    });
+                    
+                    callMediaRecorder = new MediaRecorder(callAudioStream, { mimeType: 'audio/webm;codecs=opus' });
+
+                    callMediaRecorder.ondataavailable = event => {
+                        if (event.data.size > 0 && callWebSocket.readyState === WebSocket.OPEN) {
+                            callWebSocket.send(event.data);
+                        }
+                    };
+
+                    callMediaRecorder.onstop = () => {
+                        // callAudioStream.getTracks().forEach(track => track.stop()); // Ne pas arrêter le stream ici, seulement à la fin de l'appel
+                        console.log("Enregistrement d'appel PTT arrêté.");
+                        pushToTalkButton.classList.remove('recording'); 
+                        pushToTalkButton.textContent = "Relâché"; 
+                        callMessageDisplay.textContent = "Relâché. L'IA réfléchit...";
+                        chatLoadingIndicator.classList.add('active'); 
+                        aiThinkingIndicator.style.display = 'inline-flex'; 
+                    };
+
+                    callWebSocket = new WebSocket(`ws://127.0.0.1:8000/api/v1/teleassistance/ws`); // Endpoint WebSocket
+
+                    callWebSocket.onopen = (event) => {
+                        console.log("WebSocket d'appel connecté.");
+                        isCallActive = true;
+                        updateUI(); 
+                        callWebSocket.send(JSON.stringify({ type: "SESSION_INIT", id_session: sessionId }));
+                        callMessageDisplay.textContent = "Appel démarré. Appuyez et maintenez le bouton pour parler.";
+                        showNotification("Appel démarré !", "success");
+                    };
+
+                    callWebSocket.onmessage = async (event) => {
+                        const data = JSON.parse(event.data);
+                        console.log("Réponse d'appel WebSocket reçue:", data);
+                        
+                        if (data.type === "AI_THINKING") {
+                            chatLoadingIndicator.classList.add('active'); 
+                            aiThinkingIndicator.style.display = 'inline-flex'; 
+                            aiSpeakingWaveform.classList.remove('active'); 
+                            callStatus.textContent = "L'IA réfléchit...";
+                            callStatus.classList.remove('recording-active');
+                            pushToTalkButton.textContent = "L'IA réfléchit..."; 
+                            if (currentAudioPlayer) {
+                                currentAudioPlayer.pause();
+                                currentAudioPlayer.currentTime = 0;
+                            }
+                        } else if (data.type === "AI_RESPONSE") {
+                            chatLoadingIndicator.classList.remove('active'); 
+                            aiThinkingIndicator.style.display = 'none'; 
+                            callStatus.textContent = "En appel...";
+                            callStatus.classList.add('recording-active'); 
+                            addMessage(data.reponse_ia, 'ai', data.ai_message_db_id, `/api/v1/core/audio_response/${data.chemin_audio_reponse_ia.split('/').pop()}`);
+                        } else if (data.type === "END_CALL_CONFIRM") {
+                            chatLoadingIndicator.classList.remove('active');
+                            aiThinkingIndicator.style.display = 'none';
+                            aiSpeakingWaveform.classList.remove('active');
+                            callStatus.textContent = "Appel terminé.";
+                            callStatus.classList.remove('recording-active');
+                            addMessage(data.reponse_ia, 'ai'); 
+                            callMessageDisplay.textContent = data.reponse_ia; 
+                            if (currentAudioPlayer) {
+                                currentAudioPlayer.pause();
+                                currentAudioPlayer.currentTime = 0;
+                            }
+                            showNotification("Appel terminé avec succès.", "success");
+                            stopCallCleanup(); // Effectuer le nettoyage final après confirmation
+                        } else if (data.type === "AI_ERROR") {
+                            chatLoadingIndicator.classList.remove('active');
+                            aiThinkingIndicator.style.display = 'none';
+                            aiSpeakingWaveform.classList.remove('active');
+                            callStatus.textContent = "Erreur d'appel.";
+                            callStatus.classList.remove('recording-active');
+                            addMessage(data.reponse_ia, 'ai');
+                            callMessageDisplay.textContent = data.reponse_ia; 
+                            if (currentAudioPlayer) {
+                                currentAudioPlayer.pause();
+                                currentAudioPlayer.currentTime = 0;
+                            }
+                            showNotification(`Erreur de l'IA pendant l'appel: ${data.reponse_ia}`, "error");
+                        } else if (data.type === "USER_TRANSCRIPTION") {
+                            addMessage(`Vous: ${data.transcription}`, 'user');
+                            callMessageDisplay.textContent = `Vous avez dit: "${data.transcription}"`;
+                        }
+                    };
+
+                    callWebSocket.onclose = (event) => {
+                        console.log("WebSocket d'appel déconnecté:", event);
+                        if (isCallActive) { // Si la déconnexion n'est pas initiée par hangupButton
+                            showNotification("La connexion d'appel a été interrompue.", "error");
+                        }
+                        stopCallCleanup(); // Nettoyage en cas de fermeture inattendue
+                    };
+
+                    callWebSocket.onerror = (error) => {
+                        console.error("Erreur WebSocket d'appel:", error);
+                        showNotification("Erreur de connexion pendant l'appel. Veuillez réessayer.", "error");
+                        stopCallCleanup(); // Nettoyage en cas d'erreur
+                    };
+
+                    // Gérer le Push-to-Talk
+                    pushToTalkButton.addEventListener('mousedown', () => {
+                        if (isCallActive && callMediaRecorder.state === 'inactive') {
+                            callMediaRecorder.start(100); // Enregistrer par petits morceaux (100ms)
+                            pushToTalkButton.classList.add('recording');
+                            pushToTalkButton.textContent = "Parle...";
+                            callStatus.textContent = "Enregistrement...";
+                            callStatus.classList.add('recording-active');
+                            chatLoadingIndicator.classList.remove('active'); // Cacher l'indicateur de réflexion
+                            aiThinkingIndicator.style.display = 'none'; // Cacher les points
+                            aiSpeakingWaveform.classList.remove('active'); // Cacher l'animation de parole
+                            if (currentAudioPlayer) {
+                                currentAudioPlayer.pause();
+                                currentAudioPlayer.currentTime = 0;
+                            }
+                        }
+                    });
+
+                    pushToTalkButton.addEventListener('mouseup', () => {
+                        if (isCallActive && callMediaRecorder.state === 'recording') {
+                            callMediaRecorder.stop(); // Arrête l'enregistrement et envoie le dernier chunk
+                        }
+                    });
+
+                    // Pour les écrans tactiles
+                    pushToTalkButton.addEventListener('touchstart', (e) => {
+                        e.preventDefault(); // Empêche le défilement et le zoom
+                        if (isCallActive && callMediaRecorder.state === 'inactive') {
+                            callMediaRecorder.start(100);
+                            pushToTalkButton.classList.add('recording');
+                            pushToTalkButton.textContent = "Parle...";
+                            callStatus.textContent = "Enregistrement...";
+                            callStatus.classList.add('recording-active');
+                            chatLoadingIndicator.classList.remove('active');
+                            aiThinkingIndicator.style.display = 'none';
+                            aiSpeakingWaveform.classList.remove('active');
+                            if (currentAudioPlayer) {
+                                currentAudioPlayer.pause();
+                                currentAudioPlayer.currentTime = 0;
+                            }
+                        }
+                    });
+
+                    pushToTalkButton.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        if (isCallActive && callMediaRecorder.state === 'recording') {
+                            callMediaRecorder.stop();
+                        }
+                    });
+
+                } catch (err) {
+                    console.error('Erreur d\'accès au microphone pour l\'appel:', err);
+                    showNotification("Impossible d'accéder au microphone pour l'appel. Vérifiez les permissions.", 'error');
+                }
+            }
+
+            // Fonction pour arrêter l'appel et nettoyer
+            function stopCall() {
+                if (!isCallActive) return;
+
+                if (callMediaRecorder && callMediaRecorder.state !== 'inactive') {
+                    callMediaRecorder.stop();
+                }
+                if (callAudioStream) {
+                    callAudioStream.getTracks().forEach(track => track.stop());
+                }
+                
+                if (currentAudioPlayer) {
+                    currentAudioPlayer.pause();
+                    currentAudioPlayer.currentTime = 0;
+                }
+
+                if (callWebSocket && callWebSocket.readyState === WebSocket.OPEN) {
+                    callWebSocket.send(JSON.stringify({ type: "END_CALL" }));
+                    console.log("Signal END_CALL envoyé au backend. En attente de la fermeture par le serveur.");
+                    callStatus.textContent = "Fin de l'appel...";
+                    callStatus.classList.remove('recording-active');
+                    chatLoadingIndicator.classList.add('active'); 
+                    aiThinkingIndicator.style.display = 'inline-flex'; 
+                    aiSpeakingWaveform.classList.remove('active'); 
+                    callMessageDisplay.textContent = "Raccrochage en cours...";
+                } else {
+                    stopCallCleanup(); // Nettoyage immédiat si WebSocket déjà fermé
+                    showNotification("L'appel a été terminé (connexion déjà fermée ou non établie).", "info");
+                }
+            }
+
+            // Fonction de nettoyage après la fin de l'appel (appelée par stopCall ou onclose)
+            function stopCallCleanup() {
+                isCallActive = false;
+                updateUI(); 
+                callStatus.textContent = "Appel terminé.";
+                callStatus.classList.remove('recording-active');
+                chatLoadingIndicator.classList.remove('active');
+                aiThinkingIndicator.style.display = 'none';
+                aiSpeakingWaveform.classList.remove('active');
+                callMessageDisplay.textContent = "Appel terminé.";
+                pushToTalkButton.classList.remove('recording');
+                pushToTalkButton.textContent = "Parler";
+            }
+
+            // Fonction unique pour mettre à jour l'UI en fonction du mode (chat ou appel)
+            function updateUI() {
+                if (isCallActive) {
+                    // Mode Appel
+                    callButton.style.display = 'none';
+                    hangupButton.style.display = 'flex';
+                    callStatus.classList.add('active'); 
+                    chatInputContainer.style.display = 'none'; 
+                    callInterface.classList.add('active'); 
+
+                    // Masquer les indicateurs de chat
+                    chatLoadingIndicator.classList.remove('active');
+                    chatRecordingIndicator.classList.remove('active');
+                    aiThinkingIndicator.style.display = 'none';
+                    micButtonChat.style.display = 'none'; // Masquer le bouton micro du chat
+                    sendButton.style.display = 'none'; // Masquer le bouton envoyer du chat
+
+                } else {
+                    // Mode Chat
+                    callButton.style.display = 'flex';
+                    hangupButton.style.display = 'none';
+                    callStatus.classList.remove('active'); 
+                    chatInputContainer.style.display = 'flex'; 
+                    callInterface.classList.remove('active'); 
+
+                    // Assurez-vous que les indicateurs d'appel sont masqués
+                    chatLoadingIndicator.classList.remove('active');
+                    aiThinkingIndicator.style.display = 'none';
+                    aiSpeakingWaveform.classList.remove('active');
+                    pushToTalkButton.classList.remove('recording');
+                    pushToTalkButton.textContent = "Parler";
+
+                    // Afficher les éléments du chat
+                    micButtonChat.style.display = 'flex'; // Afficher le bouton micro du chat
+                    sendButton.style.display = 'flex'; // Afficher le bouton envoyer du chat
+                }
+            }
+
+            // --- HISTORIQUE DE CONVERSATION (inchangé) ---
+            const historyBtn = document.getElementById('history-fetch-btn');
+            const historySessionIdInput = document.getElementById('history-session-id');
+            const historyList = document.getElementById('conversation-history-list');
+
+            historyBtn.addEventListener('click', async () => {
+                const sessId = historySessionIdInput.value.trim();
+                if (!sessId) {
+                    showNotification('Veuillez entrer un ID de session.', "info");
+                    return;
+                }
+                historyList.innerHTML = 'Chargement...';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/conversation_history/${sessId}`, {});
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            historyList.innerHTML = 'Aucun historique trouvé pour cette session.';
+                        } else {
+                           const errorData = await response.json();
+                           throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+                        }
+                        return;
+                    }
+                    const data = await response.json();
+                    historyList.innerHTML = '';
+                    if (data.length === 0) {
+                        historyList.innerHTML = 'Aucun historique trouvé pour cette session.';
+                        return;
+                    }
+                    data.forEach(log => {
+                        const p = document.createElement('p');
+                        p.className = `p-2 rounded-md ${log.role === 'user' ? 'bg-blue-50' : 'bg-green-50'}`;
+                        p.textContent = `[${log.role}] ${log.contenu}`;
+                        historyList.appendChild(p);
+                    });
+                } catch (error) {
+                    console.error("Erreur lors de la récupération de l'historique:", error);
+                    historyList.innerHTML = `<p class="text-red-500">Erreur de chargement: ${error.message}</p>`;
+                }
+            });
+            
+            // --- GESTION DES CONNAISSANCES (Logique de base - inchangé) ---
+            async function handleKnowledgeForm(formId, url, method, bodyBuilder) {
+                document.getElementById(formId).addEventListener('submit', async e => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const body = bodyBuilder(form);
+                    
+                    try {
+                        const response = await fetch(`${API_BASE_URL}${url}`, {
+                            method: method,
+                            headers: { 
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(body)
+                        });
+                        const result = await response.json();
+                        if (!response.ok) {
+                            throw new Error(result.detail || 'Erreur serveur');
+                        }
+                        showNotification(`Succès: ${JSON.stringify(result)}`, "success");
+                        form.reset();
+                    } catch (error) {
+                        showNotification(`Erreur: ${error.message}`, "error");
+                    }
+                });
+            }
+
+            handleKnowledgeForm('form-add-maladie', '/knowledge/maladies/', 'POST', form => ({
+                nom_fr: form.elements.nom_fr.value,
+                description_fr: form.elements.description_fr.value
+            }));
+
+            handleKnowledgeForm('form-add-symptome', '/knowledge/symptomes/', 'POST', form => ({
+                nom_fr: form.elements.nom_fr.value,
+                description_fr: form.elements.description_fr.value
+            }));
+
+            handleKnowledgeForm('form-link-maladie-symptome', '/knowledge/maladie-symptome-liens/', 'POST', form => ({
+                maladie_id: parseInt(form.elements.maladie_id.value),
+                symptome_id: parseInt(form.elements.symptome_id.value),
+                force_lien: parseFloat(form.elements.force_lien.value)
+            }));
+            
+            // La mise à jour est un peu plus complexe, voici un exemple simple
+            document.getElementById('form-update-maladie').addEventListener('submit', async e => {
+                e.preventDefault();
+                const form = e.target;
+                const maladieId = form.elements.maladie_id.value;
+                if (!maladieId) {
+                    showNotification("L'ID de la maladie est requis pour la mise à jour.", "info");
+                    return;
+                }
+                const body = {
+                    description_fr: form.elements.description_fr_update.value
+                };
+                try {
+                    const response = await fetch(`${API_BASE_URL}/knowledge/maladies/${maladieId}`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.detail || 'Erreur serveur');
+                    }
+                    showNotification(`Maladie mise à jour: ${JSON.stringify(result)}`, "success");
+                    form.reset();
+                } catch (error) {
+                    showNotification(`Erreur: ${error.message}`, "error");
+                }
+            });
+        });
+    </script>
+</body>
+</html>
