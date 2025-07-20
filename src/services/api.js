@@ -9,7 +9,7 @@ const firebaseConfig = {
 
 initializeApp(firebaseConfig);
 
-const BACKEND_URL = "https://bfc6af3cc2c6.ngrok-free.app";
+const BACKEND_URL = "https://172.16.3.114";
 if (!BACKEND_URL) {
   console.error("Erreur: La variable d'environnement REACT_APP_BACKEND_URL n'est pas définie.");
 }
@@ -39,7 +39,7 @@ export const inscrirePatient = async (userData) => {
     const currentUser = auth.currentUser;
     if (!currentUser) return { error: "Utilisateur non connecté à Firebase." };
     const idToken = await currentUser.getIdToken();
-    const response = await fetch(`${BACKEND_URL}/patient/inscription/`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/auth/register-firebase/`, {
       method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` }, body: JSON.stringify(userData)
     });
     if (!response.ok) { const errorData = await response.json(); return { error: errorData.detail || "Erreur lors de l'inscription", status: response.status }; }
@@ -62,7 +62,7 @@ export async function createStructure(data, idToken) {
 // profil_patient
 export const getPatientProfile = async (firebaseUid, idToken) => {
   try {
-    const url = `${BACKEND_URL}/patient/patients/${firebaseUid}/`;
+    const url = `${BACKEND_URL}/api/v1/patients/${firebaseUid}/`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`, 'ngrok-skip-browser-warning': 'true', }, });
     if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail || `Erreur serveur: ${response.status}`); }
     const data = await response.json(); return data;

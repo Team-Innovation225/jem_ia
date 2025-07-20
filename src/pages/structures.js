@@ -1,3 +1,5 @@
+// Exemple pour un composant StructuresPage prenant toute la largeur
+
 import React, { useState } from "react";
 import { FaHospital, FaMapMarkerAlt, FaUserMd, FaStethoscope, FaComments, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
 
@@ -58,8 +60,29 @@ export default function StructuresPage() {
   });
 
   return (
-    <div style={{ background: "#f0f9ff", minHeight: "100vh", padding: "0 0 4rem 0" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2.5rem 1rem" }}>
+    <div
+      style={{
+        width: "75%",
+        minHeight: "100vh",
+        // background: "#f6fafe",
+        margin: 0,
+        padding: "2rem 0",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          // background: "#fff",
+          borderRadius: 0,
+          boxShadow: "none",
+          padding: "2rem 3vw",
+          margin: 0,
+        }}
+      >
         {/* En-tête */}
         <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#2563eb", marginBottom: "0.5rem" }}>
           Structures Médicales

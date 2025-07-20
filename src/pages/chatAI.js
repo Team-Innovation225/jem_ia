@@ -10,82 +10,110 @@ import {
   FaNotesMedical,
 } from "react-icons/fa";
 import { FiArrowUp } from "react-icons/fi";
-import AudioChatAI from "./AudioChatAI"; // Assurez-vous que le chemin est correct
+import AudioChatAI from "./AudioChatAI";
+// import React from "react";
 
-export default function ChatAI() {
+export default function ChatAI({ compact }) {
   const navigate = useNavigate();
 
-  // Données contextuelles (structure, patient, etc.) inchangées
-  // const [structure] = useState({ id: 1, nom: "CHR Bouaké" });
-  const [showFiles, setShowFiles] = useState(false);
-  // const [interlocuteur] = useState({ nom: "Dr. Koné", type: "medecin" });
-  // const [patient] = useState({
-  //   nom: "Marie Kouassi",
-  //   age: 32,
-  //   sexe: "Femme",
-  //   groupeSanguin: "A+",
-  // });
-  // const [dernierDiag] = useState({
-  //   symptomes: "Fièvre, toux",
-  //   diagnostic: "Grippe saisonnière",
-  //   date: "10/07/2025",
-  //   gravite: "Modérée",
-  // });
-  // const [consultations] = useState([
-  //   { id: 1, date: "01/07/2025", motif: "Toux", diagnostic: "Rhume" },
-  //   { id: 2, date: "15/06/2025", motif: "Maux de tête", diagnostic: "Migraine" },
-  // ]);
-
-  // --- Partie logique IA/session/feedback adaptée ---
-  const [messages, setMessages] = useState([]);
-  const [userInput, setUserInput] = useState('');
-  const [sessionId, setSessionId] = useState(null);
+  const [messages, setMessages] = useState([
+    {
+      id: "initial-ia-message",
+      sender: "ai",
+      text: "Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd'hui ?",
+      aiMessageDbId: null,
+      feedback: null,
+      audioPath: null,
+    },
+  ]);
+  const [userInput, setUserInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [sessionId, setSessionId] = useState(() =>
+    crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)
+  );
+  const [showFiles, setShowFiles] = useState(false);
   const [showAudioPage, setShowAudioPage] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const chatMessagesRef = useRef(null);
   const textareaRef = useRef(null);
 
   // URL de votre backend Django
-  const DJANGO_CHAT_URL = 'https://564fca1c6c02.ngrok-free.app/ia/chat/';
-  const DJANGO_FEEDBACK_URL = 'https://564fca1c6c02.ngrok-free.app/ia/feedback/';
+  const DJANGO_CHAT_URL = 'https://172.16.3.114/api/v1/patients/chat';
+  const DJANGO_FEEDBACK_URL = 'https://172.16.3.114/api/v1/feedback/';
 
-  // Scroll fluide
+  // Fonction scrollToBottom
+  const scrollToBottom = () => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  };
+
   useEffect(() => {
     chatMessagesRef.current?.scrollTo({ top: chatMessagesRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  // Message initial IA
-  useEffect(() => {
-    setMessages([{
-      id: 'initial-ia-message',
-      sender: 'ia',
-      text: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
-      aiMessageDbId: null,
-      feedback: null
-    }]);
-  }, []);
+  // Fonction d'enregistrement vocal
+  const handleMicClick = async () => {
+    if (!isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        audioChunksRef.current = [];
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          audioChunksRef.current.push(event.data);
+        };
+        mediaRecorderRef.current.onstop = () => {
+          stream.getTracks().forEach(track => track.stop());
+          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          setAudioBlob(blob);
+          setIsRecording(false);
+          sendMessage(blob); // Envoie le message vocal
+        };
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+      } catch (err) {
+        alert("Impossible d'accéder au micro.");
+      }
+    } else {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   // Envoi message utilisateur
-  const sendMessage = async () => {
-    const message = userInput.trim();
-    if (message === '') return;
+  const sendMessage = async (audioBlobParam = null) => {
+    const text = userInput.trim();
+    let formData = new FormData();
 
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), sender: 'user', text: message }
-    ]);
-    setUserInput('');
+    if (audioBlobParam) {
+      addMessage("Message vocal...", "user");
+      formData.append("audio_file", audioBlobParam, "voice_message.webm");
+      formData.append("message", "");
+      formData.append("id_session", sessionId);
+    } else if (audioBlob) {
+      addMessage("Message vocal...", "user");
+      formData.append("audio_file", audioBlob, "voice_message.webm");
+      formData.append("message", "");
+      formData.append("id_session", sessionId);
+    } else if (text) {
+      addMessage(text, "user");
+      formData.append("message", text);
+      formData.append("id_session", sessionId);
+    } else {
+      return;
+    }
+
+    setUserInput("");
+    setAudioBlob(null);
     setLoading(true);
 
     try {
       const response = await fetch(DJANGO_CHAT_URL, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message_utilisateur: message, // <-- ici !
-          id_session: sessionId,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -107,11 +135,11 @@ export default function ChatAI() {
           sender: 'ia',
           text: data.reponse_ia,
           aiMessageDbId: data.ai_message_db_id,
-          feedback: null
+          feedback: null,
+          audioPath: data.chemin_audio_reponse_ia || null
         }
       ]);
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
       setMessages(prev => [
         ...prev,
         {
@@ -127,7 +155,23 @@ export default function ChatAI() {
     }
   };
 
-  // Feedback IA
+  // Ajout d'un message
+  const addMessage = (message, sender, messageId = null, audioPath = null) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: messageId || Date.now(),
+        sender,
+        text: message,
+        aiMessageDbId: messageId,
+        feedback: null,
+        audioPath,
+      },
+    ]);
+    setTimeout(scrollToBottom, 100);
+  };
+
+  // Envoi du feedback
   const handleFeedback = async (messageId, feedbackValue) => {
     const messageToUpdate = messages.find(msg => msg.id === messageId);
     if (!messageToUpdate || messageToUpdate.aiMessageDbId === null) {
@@ -185,24 +229,24 @@ export default function ChatAI() {
       height: "100vh",
       boxSizing: "border-box",
     },
-    sidebar: {
-      width: 320,
-      minWidth: 260,
-      maxWidth: 340,
-      background: "#fff",
-      borderRadius: "1.5rem 0 0 1.5rem",
-      boxShadow: "2px 0 16px 0 rgba(46,125,255,0.10)",
-      padding: "2rem 1.2rem 1.2rem 1.2rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: "2rem",
-      height: "100vh",
-      position: "sticky",
-      left: 0,
-      top: 0,
-      borderRight: "2px solid #e0eafc",
-      zIndex: 10,
-    },
+    // sidebar: {
+    //   width: 320,
+    //   minWidth: 260,
+    //   maxWidth: 340,
+    //   background: "#fff",
+    //   borderRadius: "1.5rem 0 0 1.5rem",
+    //   boxShadow: "2px 0 16px 0 rgba(46,125,255,0.10)",
+    //   padding: "2rem 1.2rem 1.2rem 1.2rem",
+    //   display: "flex",
+    //   flexDirection: "column",
+    //   gap: "2rem",
+    //   height: "100vh",
+    //   position: "sticky",
+    //   left: 0,
+    //   top: 0,
+    //   borderRight: "2px solid #e0eafc",
+    //   zIndex: 10,
+    // },
     sidebarScroll: {
       flex: 1,
       overflowY: "auto",
@@ -288,9 +332,9 @@ export default function ChatAI() {
     },
     chatWrapper: {
       flex: 1,
-      background: colors.blanc,
-      borderRadius: "0 1.5rem 1.5rem 0",
-      boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
+      background: "none",
+      // borderRadius: "0 1.5rem 1.5rem 0",
+      // boxShadow: "0 2px 16px rgba(46,125,255,0.07)",
       margin: "0 2.5rem 0 0",
       display: "flex",
       flexDirection: "column",
@@ -341,7 +385,7 @@ export default function ChatAI() {
       display: "flex",
       flexDirection: "column",
       gap: "1.2rem",
-      background: colors.gris,
+      background: "none",
       position: "relative",
     },
     msgRow: {
@@ -449,7 +493,19 @@ export default function ChatAI() {
   };
 
   return (
-    <div style={styles.root}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        maxWidth: "75%", // Prend toute la largeur
+        margin: 0,
+        background: "none", // Enlève l'arrière-plan
+        borderRadius: 0,    // Enlève les arrondis
+        boxShadow: "none",  // Enlève l'ombre
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Flèche retour */}
       {showFiles && (
         <div
@@ -539,6 +595,11 @@ export default function ChatAI() {
                   __html: msg.text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"),
                 }}
               />
+              {msg.audioPath && (
+                <div className="audio-player-container">
+                  <audio controls src={msg.audioPath} style={{ width: 220 }} />
+                </div>
+              )}
               {/* Feedback IA */}
               {msg.sender === "ia" && msg.aiMessageDbId !== null && (
                 <div style={{
@@ -642,9 +703,14 @@ export default function ChatAI() {
               style={styles.iconBtn}
               tabIndex={-1}
               aria-label="Enregistrer un audio"
-              onClick={() => alert("Fonction d'enregistrement audio à venir")}
+              onClick={handleMicClick}
+              disabled={loading}
             >
-              <FaMicrophone size={18} />
+              {isRecording ? (
+                <span style={{ color: "#22c55e" }}>●</span>
+              ) : (
+                <FaMicrophone size={18} />
+              )}
             </button>
             <button type="button" style={styles.iconBtn} tabIndex={-1} aria-label="Pièce jointe">
               <FaPaperclip size={18} />

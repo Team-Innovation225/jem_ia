@@ -197,7 +197,7 @@ export default function Administrator() {
 
   return (
     <div style={styles.root}>
-      {/* Menu latéral */}
+      {/* Barre latérale inchangée */}
       <aside style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <FaHospital style={{ color: "#2563eb", fontSize: 28 }} />
@@ -250,156 +250,236 @@ export default function Administrator() {
       </aside>
 
       {/* Contenu principal */}
-      <main style={styles.main}>
-        {/* En-tête structure */}
-        <div style={styles.header}>
-          <FaHospital style={{ color: "#2563eb", fontSize: 28 }} />
-          <span style={styles.headerTitle}>{structureActive.nom}</span>
+      <main style={{
+        ...styles.main,
+        background: "linear-gradient(120deg,#f6fafe 80%,#e0eafc 100%)",
+        borderRadius: "1.5rem",
+        margin: "2rem",
+        boxShadow: "0 4px 32px #2563eb22",
+        minHeight: "calc(100vh - 4rem)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "2rem"
+      }}>
+        {/* Header fixe */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1.5rem 2rem",
+          background: "#fff",
+          borderRadius: "1.2rem",
+          boxShadow: "0 2px 12px #2563eb11",
+          marginBottom: "1.5rem"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <FaHospital style={{ color: "#2563eb", fontSize: 34 }} />
+            <span style={{ fontWeight: 800, color: "#2563eb", fontSize: "2.2rem" }}>
+              {structureActive.nom}
+            </span>
+            <span style={{
+              background: "#e0eafc",
+              color: "#2563eb",
+              borderRadius: "1rem",
+              padding: "0.5rem 1.2rem",
+              fontWeight: 600,
+              fontSize: "1.08rem",
+              marginLeft: 12
+            }}>
+              Administration
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 18 }}>
+            <button style={styles.addBtn}><FaPlus /> Ajouter personnel</button>
+            <button style={styles.addBtn}><FaBell /> Alertes</button>
+            <button style={styles.addBtn}><FaCog /> Paramètres</button>
+          </div>
         </div>
 
-        {/* Tableau de bord */}
-        {page === "dashboard" && (
-          <section>
-            <div style={styles.dashboardGrid}>
-              <div style={styles.dashboardCard("#bae6fd")}>
-                <FaUserMd style={{ color: "#2563eb", fontSize: 32, marginBottom: 8 }} />
-                <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.medecins}</div>
-                <div style={{ color: "#64748b" }}>Médecins</div>
-              </div>
-              <div style={styles.dashboardCard("#bbf7d0")}>
-                <FaUsers style={{ color: "#059669", fontSize: 32, marginBottom: 8 }} />
-                <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.patients}</div>
-                <div style={{ color: "#64748b" }}>Patients</div>
-              </div>
-              <div style={styles.dashboardCard("#bae6fd")}>
-                <FaCalendarAlt style={{ color: "#38b6ff", fontSize: 32, marginBottom: 8 }} />
-                <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.consultations}</div>
-                <div style={{ color: "#64748b" }}>Consultations</div>
-              </div>
-              <div style={styles.dashboardCard("#fecaca")}>
-                <FaBell style={{ color: "#ef4444", fontSize: 32, marginBottom: 8 }} />
-                <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.alertes}</div>
-                <div style={{ color: "#64748b" }}>Alertes IA à valider</div>
-              </div>
+        {/* Encadré infos structure */}
+        <div style={{
+          background: "#fff",
+          borderRadius: "1rem",
+          boxShadow: "0 2px 12px #2563eb11",
+          padding: "1.2rem 2rem",
+          marginBottom: "1.5rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "2.5rem"
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, color: "#2563eb", fontSize: "1.15rem" }}>
+              Informations générales
             </div>
-          </section>
-        )}
+            <div style={{ color: "#64748b", fontSize: "1.05rem", marginTop: 6 }}>
+              Type : Hôpital / Clinique / Pharmacie<br />
+              Adresse : 123 Avenue de la Santé, Bouaké<br />
+              Contact : 01 23 45 67 89
+            </div>
+          </div>
+          <div style={{
+            display: "flex",
+            gap: "2.5rem",
+            marginLeft: "auto"
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, color: "#2563eb", fontSize: "1.08rem" }}>Médecins</div>
+              <div style={{ fontSize: "1.7rem", fontWeight: 800 }}>{fakeDashboard.medecins}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: "#059669", fontSize: "1.08rem" }}>Patients</div>
+              <div style={{ fontSize: "1.7rem", fontWeight: 800 }}>{fakeDashboard.patients}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: "#38b6ff", fontSize: "1.08rem" }}>Consultations</div>
+              <div style={{ fontSize: "1.7rem", fontWeight: 800 }}>{fakeDashboard.consultations}</div>
+            </div>
+          </div>
+        </div>
 
-        {/* Personnel médical */}
-        {page === "personnel" && (
-          <section>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+        {/* Section centrale selon la page */}
+        <div style={{
+          background: "#fff",
+          borderRadius: "1.2rem",
+          boxShadow: "0 2px 12px #2563eb11",
+          padding: "2rem",
+          minHeight: 400,
+        }}>
+          {page === "dashboard" && (
+            <section>
+              <div style={styles.sectionTitle}><FaBell /> Tableau de bord</div>
+              <div style={styles.dashboardGrid}>
+                <div style={styles.dashboardCard("#bae6fd")}>
+                  <FaUserMd style={{ color: "#2563eb", fontSize: 32, marginBottom: 8 }} />
+                  <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.medecins}</div>
+                  <div style={{ color: "#64748b" }}>Médecins</div>
+                </div>
+                <div style={styles.dashboardCard("#bbf7d0")}>
+                  <FaUsers style={{ color: "#059669", fontSize: 32, marginBottom: 8 }} />
+                  <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.patients}</div>
+                  <div style={{ color: "#64748b" }}>Patients</div>
+                </div>
+                <div style={styles.dashboardCard("#bae6fd")}>
+                  <FaCalendarAlt style={{ color: "#38b6ff", fontSize: 32, marginBottom: 8 }} />
+                  <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.consultations}</div>
+                  <div style={{ color: "#64748b" }}>Consultations</div>
+                </div>
+                <div style={styles.dashboardCard("#fecaca")}>
+                  <FaBell style={{ color: "#ef4444", fontSize: 32, marginBottom: 8 }} />
+                  <div style={{ fontSize: "2rem", fontWeight: 800 }}>{fakeDashboard.alertes}</div>
+                  <div style={{ color: "#64748b" }}>Alertes IA à valider</div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Personnel médical */}
+          {page === "personnel" && (
+            <section>
               <div style={styles.sectionTitle}><FaUserMd /> Personnel médical</div>
-              <button style={styles.addBtn}>
-                <FaPlus /> Ajouter un membre
-              </button>
-            </div>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Nom</th>
-                  <th style={styles.th}>Rôle</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fakePersonnel.map(m => (
-                  <tr key={m.id}>
-                    <td style={styles.td}>{m.nom}</td>
-                    <td style={{ ...styles.td, display: "flex", alignItems: "center", gap: 8 }}>
-                      {m.role === "Médecin" && <FaUserMd style={{ color: "#2563eb" }} />}
-                      {m.role === "Infirmier" && <FaUserNurse style={{ color: "#059669" }} />}
-                      {m.role === "Assistant" && <FaUserTie style={{ color: "#64748b" }} />}
-                      {m.role}
-                    </td>
-                    <td style={styles.td}>
-                      <button style={{ color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir</button>
-                    </td>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Nom</th>
+                    <th style={styles.th}>Rôle</th>
+                    <th style={styles.th}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+                </thead>
+                <tbody>
+                  {fakePersonnel.map(m => (
+                    <tr key={m.id}>
+                      <td style={styles.td}>{m.nom}</td>
+                      <td style={{ ...styles.td, display: "flex", alignItems: "center", gap: 8 }}>
+                        {m.role === "Médecin" && <FaUserMd style={{ color: "#2563eb" }} />}
+                        {m.role === "Infirmier" && <FaUserNurse style={{ color: "#059669" }} />}
+                        {m.role === "Assistant" && <FaUserTie style={{ color: "#64748b" }} />}
+                        {m.role}
+                      </td>
+                      <td style={styles.td}>
+                        <button style={{ color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
 
-        {/* Patients */}
-        {page === "patients" && (
-          <section>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          {/* Patients */}
+          {page === "patients" && (
+            <section>
               <div style={styles.sectionTitle}><FaUsers /> Patients</div>
-            </div>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Nom</th>
-                  <th style={styles.th}>Âge</th>
-                  <th style={styles.th}>Sexe</th>
-                  <th style={styles.th}>Dernière consultation</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fakePatients.map(p => (
-                  <tr key={p.id}>
-                    <td style={styles.td}>{p.nom}</td>
-                    <td style={styles.td}>{p.age}</td>
-                    <td style={styles.td}>{p.sexe}</td>
-                    <td style={styles.td}>{p.derniereConsult}</td>
-                    <td style={styles.td}>
-                      <button style={{ color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir dossier</button>
-                    </td>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Nom</th>
+                    <th style={styles.th}>Âge</th>
+                    <th style={styles.th}>Sexe</th>
+                    <th style={styles.th}>Dernière consultation</th>
+                    <th style={styles.th}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+                </thead>
+                <tbody>
+                  {fakePatients.map(p => (
+                    <tr key={p.id}>
+                      <td style={styles.td}>{p.nom}</td>
+                      <td style={styles.td}>{p.age}</td>
+                      <td style={styles.td}>{p.sexe}</td>
+                      <td style={styles.td}>{p.derniereConsult}</td>
+                      <td style={styles.td}>
+                        <button style={{ color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir dossier</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
 
-        {/* Agenda */}
-        {page === "agenda" && (
-          <section>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          {/* Agenda */}
+          {page === "agenda" && (
+            <section>
               <div style={styles.sectionTitle}><FaCalendarAlt /> Agenda</div>
-            </div>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Heure</th>
-                  <th style={styles.th}>Patient</th>
-                  <th style={styles.th}>Médecin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fakeAgenda.map(a => (
-                  <tr key={a.id}>
-                    <td style={styles.td}>{a.date}</td>
-                    <td style={styles.td}>{a.heure}</td>
-                    <td style={styles.td}>{a.patient}</td>
-                    <td style={styles.td}>{a.medecin}</td>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>Heure</th>
+                    <th style={styles.th}>Patient</th>
+                    <th style={styles.th}>Médecin</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+                </thead>
+                <tbody>
+                  {fakeAgenda.map(a => (
+                    <tr key={a.id}>
+                      <td style={styles.td}>{a.date}</td>
+                      <td style={styles.td}>{a.heure}</td>
+                      <td style={styles.td}>{a.patient}</td>
+                      <td style={styles.td}>{a.medecin}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
 
-        {/* Paramètres */}
-        {page === "parametres" && (
-          <section>
-            <div style={styles.sectionTitle}><FaCog /> Paramètres</div>
-            <div style={{
-              background: "#fff",
-              borderRadius: "1rem",
-              boxShadow: "0 2px 12px rgba(46,125,255,0.07)",
-              padding: "2rem",
-              color: "#64748b",
-              border: "1px solid #dbeafe"
-            }}>
-              <p>Gestion des paramètres de la structure (à compléter)</p>
-            </div>
-          </section>
-        )}
+          {/* Paramètres */}
+          {page === "parametres" && (
+            <section>
+              <div style={styles.sectionTitle}><FaCog /> Paramètres</div>
+              <div style={{
+                background: "#f8fafc",
+                borderRadius: "1rem",
+                boxShadow: "0 2px 12px #2563eb11",
+                padding: "2rem",
+                color: "#64748b",
+                border: "1px solid #dbeafe"
+              }}>
+                <p>Gestion des paramètres de la structure (à compléter)</p>
+              </div>
+            </section>
+          )}
+        </div>
       </main>
     </div>
   );
